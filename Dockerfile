@@ -1,14 +1,15 @@
 FROM golang:latest as builder
 # install dep
-RUN go get github.com/golang/dep/cmd/dep
+# RUN go get github.com/golang/dep/cmd/dep
 
 # setup the working directory
 WORKDIR /go/src/spdt
 COPY . .
 # install dependencies
-RUN dep ensure -v
+# RUN dep ensure -v
 # build the source
 RUN CGO_ENABLED=0 GOOS=linux go build
+RUN mv SPDT spdt
 
 # use a minimal image
 FROM ubuntu:16.04
