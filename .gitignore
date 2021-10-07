@@ -16,3 +16,6 @@
 
 #Packages installed
 /vendor
+
+# Python temporal files
+__pycache__
