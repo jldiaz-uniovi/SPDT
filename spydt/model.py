@@ -156,7 +156,7 @@ class Limit: # types/types_performance_profiles.go:32
     RequestPerSecond: int=0              # `json:"Request_per_second" bson:"request_per_second"`
 
 @dataclass
-class ContainersConfig: # types/types_policies.go:224 # TODO
+class ContainersConfig: # types/types_policies.go:224
     Limits: Limit=Limit()              # `json:"limits" bson:"limits"`
     MSCSetting: MSCSimpleSetting =MSCSimpleSetting() # `json:"mscs" bson:"mscs"`
     VMSet: VMScale=field(default_factory=dict)           # `json:"vms" bson:"vms"`
