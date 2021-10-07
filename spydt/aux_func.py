@@ -3,7 +3,7 @@ import math
 from datetime import datetime, timedelta
 from typing import Tuple
 from .model import (
-    Limit, ContainersConfig, Const, ScalingAction, State, Const, VMScale, VmProfile,
+    Limit_, ContainersConfig, Const, ScalingAction, State, Const, VMScale, VmProfile,
     SystemConfiguration, Error, MSCSimpleSetting, ConfigMetrics
 )
 
@@ -13,7 +13,7 @@ systemConfiguration = SystemConfiguration()  # TODO: ¿Por qué esta global?
 
 
 # planner/derivation/policies_derivation.go:217
-def estimatePodsConfiguration(requests:float, limits:Limit) -> Tuple[ContainersConfig, Error]:
+def estimatePodsConfiguration(requests:float, limits:Limit_) -> Tuple[ContainersConfig, Error]:
     """
     Select the service profile for a given container limit resources
     in:
@@ -263,7 +263,7 @@ def setScalingSteps(scalingSteps: list[ScalingAction],
             TimeStartTransition=startTransitionTime,
         ))
 
-def maxPodsCapacityInVM(vmProfile: VmProfile, resourceLimit: Limit) -> int:
+def maxPodsCapacityInVM(vmProfile: VmProfile, resourceLimit: Limit_) -> int:
     # For memory resources, Kubernetes Engine reserves aprox 6% of cores and 25% of Mem
     cpuCoresAvailable = vmProfile.CPUCores  * (1 - Const.PERCENTAGE_REQUIRED_k8S_INSTALLATION_CPU.value)
     memGBAvailable = vmProfile.Memory * (1 - Const.PERCENTAGE_REQUIRED_k8S_INSTALLATION_MEM.value)

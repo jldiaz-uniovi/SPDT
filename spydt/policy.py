@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from abc import ABC
 from .model import (
-    State, VmProfile, SystemConfiguration, ProcessedForecast, Policy, Limit, VMScale
+    State, VmProfile, SystemConfiguration, ProcessedForecast, Policy, Limit_, VMScale
 )
 
 @dataclass
@@ -15,6 +15,6 @@ class AbstractPolicy(ABC): # planner/derivation/policies_derivation.go:25
     def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:
         ...
 
-    def FindSuitableVMs(self, numberPods: int, limits: Limit) -> VMScale:
+    def FindSuitableVMs(self, numberPods: int, limits: Limit_) -> VMScale:
         ...
         

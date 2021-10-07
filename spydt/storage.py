@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from .model import (
-    PerformanceProfile, Error, Limit, MSCCompleteSetting
+    PerformanceProfile, Error, Limit_, MSCCompleteSetting
 )
 from typing import Tuple
 
@@ -10,7 +10,7 @@ class PerformanceProfileDAO:
     def FindByLimitsAndReplicas(self, cores: float, memory: float, replicas: int) -> Tuple[PerformanceProfile, Error]:
         return PerformanceProfile(), Error("Not implemented")
 
-    def FindProfileByLimits(self, limit: Limit) -> Tuple[PerformanceProfile, Error]:
+    def FindProfileByLimits(self, limit: Limit_) -> Tuple[PerformanceProfile, Error]:
         return PerformanceProfile(), Error("Not implemented")
 
     def UpdateById(self, id: str, performanceProfile: PerformanceProfile) -> Error:

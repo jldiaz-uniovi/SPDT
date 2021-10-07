@@ -1,20 +1,20 @@
 from datetime import datetime
 import math
 
-from .model import (Const, Limit, Policy, PolicyMetrics, ProcessedForecast,
+from .model import (Const, Limit_, Policy, PolicyMetrics, ProcessedForecast,
                     ScalingAction, ServiceInfo, Service, State, VMScale)
 from .policy import AbstractPolicy
-from .utils import (adjustGranularity, estimatePodsConfiguration,
+from .aux_func import (adjustGranularity, estimatePodsConfiguration,
                     setScalingSteps, maxPodsCapacityInVM)
 
 
 class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
-    """
+    """/*
     It assumes that the current VM set where the microservice is deployed is a homogeneous set
     Based on the unique VM type and its capacity to host a number of replicas it increases or decreases the number of VMs
-    """
+    */"""
     def currentVMType(self) -> str:
-        """It selects teh VM with more resources in case there is more than onw vm type"""
+        """// It selects teh VM with more resources in case there is more than onw vm type"""
         vmType = ""
         memGB = 0.0
         for k in self.currentState.VMs:
@@ -28,14 +28,14 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
     def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:
         policies: list[Policy] = []
         serviceToScale = self.currentState.Services[self.sysConfiguration.MainServiceName]
-        currentPodLimits = Limit(CPUCores=serviceToScale.CPU, MemoryGB=serviceToScale.Memory)
+        currentPodLimits = Limit_(CPUCores=serviceToScale.CPU, MemoryGB=serviceToScale.Memory)
 
         newPolicy = Policy()
         state = State()
         newPolicy.Metrics = PolicyMetrics(StartTimeDerivation=datetime.now())
         scalingActions: list[ScalingAction] = []
         for it in processedForecast.CriticalIntervals:
-            resourceLimits = Limit()
+            resourceLimits = Limit_()
             # Select the performance profile that fits better
             containerConfigOver, _ = estimatePodsConfiguration(it.Requests, currentPodLimits)
             newNumPods = containerConfigOver.MSCSetting.Replicas
@@ -81,7 +81,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         policies.append(newPolicy)
         return policies
 
-    def FindSuitableVMs(self, numberPods: int, limits: Limit) -> VMScale:
+    def FindSuitableVMs(self, numberPods: int, limits: Limit_) -> VMScale:
         vmScale = VMScale({})
         vmType = self.currentVMType()
         profile = self.mapVMProfiles[vmType]

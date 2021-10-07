@@ -1,7 +1,21 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import NewType
+from typing import List, NewType
+from dataclasses_json import dataclass_json, config
+
+def _f(fn=None, dv=None, df=None):
+    if df:
+        return field(metadata=config(field_name=fn), default_factory=df)
+    else:
+        return field(metadata=config(field_name=fn), default=dv)
+
+def parse_date(isodate: str) -> datetime:
+    return datetime.fromisoformat(isodate.replace("Z", "+00:00"))
+
+def _timestamp(fn=None):
+    return field(metadata=config(field_name=fn, encoder=datetime.isoformat, decoder=parse_date),
+        default_factory=datetime.now)
 
 @dataclass
 class Error:
@@ -57,110 +71,139 @@ class Const(Enum):
     ENDPOINT_RECIVE_NOTIFICATIONS = "/api/forecast"
 
 
+@dataclass_json
 @dataclass
 class Pricing: # types/types_performance_profiles.go:5
-    Price: float = 0.0  # `json:"price" bson:"price"`
-    Unit: str = ""      # `json:"unit" bson:"unit"`
+    Price: float = _f("price", 0.0)
+    Unit: str = _f("unit" , "")
 
 
+@dataclass_json
 @dataclass
 class VmProfile:  # types/type_performance_profiles.go:10
-    Type: str = ""                  # `json:"type" bson:"type"`
-    CPUCores: float = 0.0           # `json:"cpu_cores" bson:"cpu_cores"`
-    Memory: float = 0.0             # `json:"mem_gb" bson:"mem_gb"`
-    OS:  str = ""                   # `json:"os" bson:"os"`
-    _Pricing: Pricing = Pricing()   # `json:"pricing" bson:"pricing"`
-    ReplicasCapacity: int=0	        # `json:"replicas_capacity" bson:"replicas_capacity"`
+    Type: str = _f("type", "")
+    CPUCores: float = _f("cpu_cores", 0.0)
+    Memory: float = _f("mem_gb", 0.0)
+    OS:  str = _f("os", "")
+    _Pricing: Pricing = _f("pricing", df=Pricing)
+    ReplicasCapacity: int = _f("replicas_capacity", 0)
 
+@dataclass_json
 @dataclass
 class ServiceInfo: # types/type_policies.go#111
-    Scale: int=0       # `json:"Replicas"`
-    CPU: float=0.0	    # `json:"Cpu_cores"`
-    Memory: float=0.0   # `json:"Mem_gb"`
+    Scale: int = _f("Replicas", 0)
+    CPU: float = _f("Cpu_cores", 0.0)
+    Memory: float = _f("Mem_gb", 0.0)
 
 
 VMScale = NewType("VMScale", dict[str, int]) # types/types_policies.go:15
 # Number of VMs of each type
 
-
 Service = NewType("Service", dict[str, ServiceInfo]) # types/types_policies.go:12
 # Service keeps the name and scale of the scaled service
 
+@dataclass_json
 @dataclass
-class ForecastComponent:
+class ForecastComponent_:
     """Struct that models the external components to which SPDT should be connected"""
-    Endpoint: str=""	    # `yaml:"endpoint"`
-    Granularity:  str=""	# `yaml:"granularity"`
+    Endpoint: str = _f("endpoint", "")
+    Granularity:  str = _f("granularity", "")
 
 
+@dataclass_json
 @dataclass
 class Component:
     """Struct that models the external components to which SPDT should be connected"""
-    Endpoint:str=""	        # `yaml:"endpoint"`
-    Username:str=""	        # `yaml:"username"`
-    Password:str=""	        # `yaml:"password"`
-    ApiKey:str=""	        # `yaml:"api-key"`
+    Endpoint:str = _f("endpoint", "")
+    Username:str = _f("username", "")
+    Password:str = _f("password", "")
+    ApiKey:str = _f("api-key", "")
 
-
+@dataclass_json
 @dataclass
-class SystemConfiguration:  # util/config.go:42  TODO: Implemented only the fields requiered for the naive strategy
-    # Host                         string            # `yaml:"host"`
-    # CSP                          string            # `yaml:"CSP"`
-    # Region                       string            # `yaml:"region"`
-    AppName: str = ""                                # `yaml:"app-name"`
-    MainServiceName: str = ""                        # `yaml:"main-service-name"`
-    AppType: str = ""                                # `yaml:"app-type"`
-    # PricingModel                 PricingModel      # `yaml:"pricing-model"`
-    ForecastComponent: ForecastComponent = ForecastComponent()            # `yaml:"forecasting-component"`
-    PerformanceProfilesComponent: Component = Component()        # `yaml:"performance-profiles-component"`
-    # SchedulerComponent           Component         # `yaml:"scheduler-component"`
-    # ScalingHorizon               ScalingHorizon    # `yaml:"scaling-horizon"`
-    # PreferredAlgorithm           string            # `yaml:"preferred-algorithm"`
-    # PolicySettings               PolicySettings    # `yaml:"policy-settings"`
-    # PullingInterval              int               # `yaml:"pulling-interval"`
-    # StorageInterval              string            # `yaml:"storage-interval"`
+class ScalingHorizon_:
+    StartTime: datetime	= _timestamp("start-time")
+    EndTime: datetime = _timestamp("end-time")
 
+@dataclass_json
+@dataclass
+class PricingModel_:
+    Budget: float = _f("monthly-budget", 0.0)
+    BillingUnit: str = _f("billing-unit", "")
+
+@dataclass_json
+@dataclass
+class PolicySettings_:
+	ScalingMethod: str = _f("vm-scaling-method", "")
+	PreferredMetric: str = _f("preferred-metric", "")
+
+
+@dataclass_json
+@dataclass
+class SystemConfiguration:  # util/config.go:42
+    Host: str = _f("host", "")
+    CSP:  str = _f("CSP", "")
+    Region: str = _f("region", "")
+    AppName: str = _f("app-name", "")
+    MainServiceName: str = _f("main-service-name", "")
+    AppType: str = _f("app-type", "")
+    PricingModel: PricingModel_ = _f("pricing-model", df=PricingModel_)
+    ForecastComponent: ForecastComponent_ = _f("forecasting-component", df=ForecastComponent_)
+    PerformanceProfilesComponent: Component = _f("performance-profiles-component", df=Component)
+    SchedulerComponent: Component = _f("scheduler-component", df=Component)
+    ScalingHorizon: ScalingHorizon_ = _f("scaling-horizon", df=ScalingHorizon_)
+    PreferredAlgorithm: str = _f("preferred-algorithm", "")
+    PolicySettings: PolicySettings_ = _f("policy-settings", df=PolicySettings_)
+    PullingInterval: int = _f("pulling-interval", "")
+    StorageInterval: str = _f("storage-interval", "")
+
+@dataclass_json
 @dataclass
 class StateLoadCapacity: # types/type_policies.go:111
     " Represent the number of requests for a time T"
-    TimeStamp: datetime            # `json:"timestamp"`
-    Requests: float                # `json:"requests"`
+    TimeStamp: datetime = _timestamp("timestamp")
+    Requests: float = _f("requests", 0.0)
 
+@dataclass_json
 @dataclass
 class State: # types/type_policies.go:98
     "DesiredState is the metadata of the state expected to scale to"
-    Services: Service = Service({})  # `json:"Services"`
-    Hash: str = ""                   # `json:"Hash"`
-    VMs: VMScale = VMScale({})       # `json:"VMs"`    
+    Services: Service = _f("Services", df=Service)
+    Hash: str = _f("Hash", "")
+    VMs: VMScale = _f("VMs", df=VMScale)
 
+@dataclass_json
 @dataclass
 class CriticalInterval: # types/types_forecasting.go:9
     """Critical Interval is the interval of time analyzed to take a scaling decision"""
-    TimeStart: datetime = datetime.now() # `json:"TimeStart"`
-    Requests: float=0.0	                 # `json:"Requests"`	//max/min point in the interval
-    TimeEnd: datetime = datetime.now()	 # `json:"TimeEnd"`
-    TimePeak: datetime = datetime.now()
+    TimeStart: datetime = _timestamp("TimeStart")
+    Requests: float= _f("Requests", 0.0)  # //max/min point in the interval
+    TimeEnd: datetime = _timestamp("TimeEnd")
+    TimePeak: datetime = _timestamp(None)
 
+@dataclass_json
 @dataclass
 class MSCSimpleSetting: # types/types_performance_profiles.go:51
-    Replicas: int=0                     # `json:"replicas" bson:"replicas"`
-    MSCPerSecond: float=0.0             # `json:"maximum_service_capacity_per_sec" bson:"maximum_service_capacity_per_sec"`
-    BootTimeSec: float=0.0              # `json:"pod_boot_time_sec" bson:"pod_boot_time_sec"`
-    StandDevBootTimeSec: float=0.0      # `json:"sd_pod_boot_time_ms" bson:"sd_pod_boot_time_ms"`
+    Replicas: int = _f("replicas", 0)
+    MSCPerSecond: float = _f("maximum_service_capacity_per_sec", 0.0)
+    BootTimeSec: float =  _f("pod_boot_time_sec", 0.0)
+    StandDevBootTimeSec: float = _f("sd_pod_boot_time_ms", 0.0)
 
 
+@dataclass_json
 @dataclass 
-class Limit: # types/types_performance_profiles.go:32
-    CPUCores: float=0.0                  # `json:"Cpu_cores" bson:"cpu_cores"`
-    MemoryGB: float=0.0                  # `json:"Mem_gb" bson:"mem_gb"`
-    RequestPerSecond: int=0              # `json:"Request_per_second" bson:"request_per_second"`
+class Limit_: # types/types_performance_profiles.go:32
+    CPUCores: float = _f("Cpu_cores", 0.0)
+    MemoryGB: float = _f("Mem_gb", 0.0)
+    RequestPerSecond: int = _f("Request_per_second", 0)
 
+@dataclass_json
 @dataclass
 class ContainersConfig: # types/types_policies.go:224
-    Limits: Limit=Limit()              # `json:"limits" bson:"limits"`
-    MSCSetting: MSCSimpleSetting =MSCSimpleSetting() # `json:"mscs" bson:"mscs"`
-    VMSet: VMScale=VMScale({})           # `json:"vms" bson:"vms"`
-    Cost: float=0.0                      # `json:"cost" bson:"cost"`
+    Limits: Limit_ = _f("limits", df=Limit_)
+    MSCSetting: MSCSimpleSetting = _f("mscs", df=MSCSimpleSetting)
+    VMSet: VMScale = _f("vms", df=VMScale)
+    Cost: float = _f("cost", 0.0)
 
 
 @dataclass
@@ -169,74 +212,102 @@ class ProcessedForecast: # types/types_forecasting.go:33
     CriticalIntervals: list[CriticalInterval] = field(default_factory=list)
 
 
+@dataclass_json
 @dataclass
 class PolicyMetrics: # types/types_policies.go:156
-    Cost: float=0.0                                 # `json:"cost" bson:"cost"`
-    OverProvision: float=0.0                        # `json:"over_provision" bson:"over_provision"`
-    UnderProvision: float=0.0                       # `json:"under_provision" bson:"under_provision"`
-    NumberScalingActions: int=0                     # `json:"n_scaling_actions" bson:"n_scaling_actions"`
-    StartTimeDerivation: datetime = datetime.now()  # `json:"start_derivation_time" bson:"start_derivation_time"`
-    FinishTimeDerivation: datetime = datetime.now() # `json:"finish_derivation_time" bson:"finish_derivation_time"`
-    DerivationDuration: float=0.0                   # `json:"derivation_duration" bson:"derivation_duration"`
-    NumberVMScalingActions: int=0                   # `json:"num_scale_vms" bson:"num_scale_vms"`
-    NumberContainerScalingActions: int=0            # `json:"num_scale_containers" bson:"num_scale_containers"`
-    AvgShadowTime: float=0.0                        # `json:"avg_shadow_time_sec" bson:"avg_shadow_time_sec"`
-    AvgTransitionTime: float=0.0                    # `json:"avg_transition_time_sec" bson:"avg_transition_time_sec"`
-    AvgElapsedTime: float=0.0                       # `json:"avg_time_between_scaling_sec" bson:"avg_time_between_scaling_sec"`
+    Cost: float = _f("cost", 0.0)
+    OverProvision: float = _f("over_provision", 0.0)
+    UnderProvision: float = _f("under_provision", 0.0)
+    NumberScalingActions: int = _f("n_scaling_actions", 0)
+    StartTimeDerivation: datetime = _timestamp("start_derivation_time")
+    FinishTimeDerivation: datetime = _timestamp("finish_derivation_time")
+    DerivationDuration: float = _f("derivation_duration", 0.0)
+    NumberVMScalingActions: int = _f("num_scale_vms", 0)
+    NumberContainerScalingActions: int = _f("num_scale_containers", 0)
+    AvgShadowTime: float = _f("avg_shadow_time_sec", 0.0)
+    AvgTransitionTime: float = _f("avg_transition_time_sec", 0.0)
+    AvgElapsedTime: float = _f("avg_time_between_scaling_sec", 0.0)
 
 
+@dataclass_json
 @dataclass
 class ConfigMetrics: # types/types_policies.go:144
-    Cost: float=0.0                              # `json:"cost" bson:"cost"`
-    OverProvision: float=0.0                     # `json:"over_provision" bson:"over_provision"`
-    UnderProvision: float=0.0                    # `json:"under_provision" bson:"under_provision"`
-    RequestsCapacity: float=0.0                  # `json:"requests_capacity" bson:"requests_capacity"`
-    CPUUtilization: float=0.0                    # `json:"cpu_utilization" bson:"cpu_utilization"`
-    MemoryUtilization: float=0.0                 # `json:"mem_utilization" bson:"mem_utilization"`
-    ShadowTimeSec: float=0.0                     # `json:"shadow_time_sec" bson:"shadow_time_sec"`
-    TransitionTimeSec: float=0.0                 # `json:"transition_time_sec" bson:"transition_time_sec"`
-    ElapsedTimeSec: float=0.0                    # `json:"elapsed_time_sec" bson:"elapsed_time_sec"`
+    Cost: float = _f("cost", 0.0)
+    OverProvision: float = _f("over_provision", 0.0)
+    UnderProvision: float = _f("under_provision", 0.0)
+    RequestsCapacity: float = _f("requests_capacity", 0.0)
+    CPUUtilization: float = _f("cpu_utilization", 0.0)
+    MemoryUtilization: float = _f("mem_utilization", 0.0)
+    ShadowTimeSec: float = _f("shadow_time_sec", 0.0)
+    TransitionTimeSec: float = _f("transition_time_sec", 0.0)
+    ElapsedTimeSec: float = _f("elapsed_time_sec", 0.0)
 
 
+@dataclass_json
 @dataclass
 class ScalingAction: # types/types_policies.go
-    TimeStartTransition: datetime=datetime.now()    # `json:"time_start_transition" bson:"time_start_transition"`
-    InitialState: State=State()		                # `json:"initial_state" bson:"initial_state"`
-    DesiredState: State=State()                     # `json:"desired_state" bson:"desired_state"`
-    TimeStart: datetime=datetime.now()              # `json:"time_start" bson:"time_start"`
-    TimeEnd: datetime=datetime.now()                # `json:"time_end" bson:"time_end"`
-    Metrics: ConfigMetrics=ConfigMetrics()          # `json:"metrics" bson:"metrics"`
+    TimeStartTransition: datetime = _timestamp("time_start_transition")
+    InitialState: State = _f("initial_state", df=State)
+    DesiredState: State = _f("desired_state", df=State)
+    TimeStart: datetime = _f("time_start")
+    TimeEnd: datetime = _f("time_end")
+    Metrics: ConfigMetrics = _f("metrics", df=ConfigMetrics)
 
 
+@dataclass_json
 @dataclass
 class Policy: # types/types_policies.go:201
     # ID              bson.ObjectId     ` bson:"_id" json:"id"`
-    Algorithm:str = ""                       # `json:"algorithm" bson:"algorithm"`
-    Metrics: PolicyMetrics = PolicyMetrics() # `json:"metrics" bson:"metrics"`
-    Status: str = ""                         # `json:"status" bson:"status"`
-    Parameters: dict[str,str]=field(default_factory=dict)        # `json:"parameters" bson:"parameters"`
-    ScalingActions: list[ScalingAction]=field(default_factory=list) # `json:"scaling_actions" bson:"scaling_actions"`
-    TimeWindowStart: datetime = datetime.now()    # `json:"window_time_start"  bson:"window_time_start"`
-    TimeWindowEnd:   datetime = datetime.now()    # `json:"window_time_end"  bson:"window_time_end"`
+    Algorithm: str = _f("algorithm", "")
+    Metrics: PolicyMetrics = _f("metrics", df=PolicyMetrics)
+    Status: str = _f("status", "")
+    Parameters: dict[str,str] = _f("parameters", df=dict)
+    ScalingActions: list[ScalingAction] = _f("scaling_actions", df=list)
+    TimeWindowStart: datetime = _timestamp("window_time_start")
+    TimeWindowEnd:   datetime = _timestamp("window_time_end")
 
 
+@dataclass_json
 @dataclass
 class PerformanceProfile:
-	ID: str=""                                                          # `bson:"_id" json:"id"`
-	MSCSettings: list[MSCSimpleSetting] = field(default_factory=list)   # `json:"mscs" bson:"mscs"`
-	_Limit: Limit = Limit()                                             # `json:"limits" bson:"limits"`
+    ID: str = _f("_id", "")
+    MSCSettings: list[MSCSimpleSetting] = _f("mscs", df=list)
+    Limit: Limit_ = _f("limits", df=Limit_)
 
+@dataclass_json
 @dataclass
 class MaxServiceCapacity: # types/types_performance_profiles.go:58
-    Experimental   : float=0.0          # `json:"Experimental" bson:"experimental"`
-    RegBruteForce  : float=0.0          # `json:"RegBruteForce" bson:"reg_brute_force"`
-    RegSmart       : float=0.0          # `json:"RegSmart" bson:"reg_smart"`
+    Experimental   : float = _f("Experimental", 0.0)
+    RegBruteForce  : float = _f("RegBruteForce", 0.0)
+    RegSmart       : float = _f("RegSmart", 0.0)
 
-
+@dataclass_json
 @dataclass
 class MSCCompleteSetting: # types/types_performance_profiles.go:77
-    Replicas      		: int = 0                   # `json:"Replicas"`
-    BootTimeMs         	: float = 0.0               # `json:"Pod_boot_time_ms"`
-    StandDevBootTimeMS 	: float = 0.0               # `json:"Sd_Pod_boot_time_ms"`
-    MSCPerSecond        : MaxServiceCapacity = MaxServiceCapacity()  # `json:"Maximum_service_capacity_per_sec"`
-    MSCPerMinute        : MaxServiceCapacity = MaxServiceCapacity()  # `json:"Maximum_service_capacity_per_min"`
+    Replicas: int = _f("Replicas", 0)
+    BootTimeMs: float = _f("Pod_boot_time_ms", 0.0)
+    StandDevBootTimeMS: float = _f("Sd_Pod_boot_time_ms", 0.0)
+    MSCPerSecond: MaxServiceCapacity = _f("Maximum_service_capacity_per_sec", df=MaxServiceCapacity)
+    MSCPerMinute: MaxServiceCapacity = _f("Maximum_service_capacity_per_min", df=MaxServiceCapacity)
+
+
+# types/types_forecasting.go:17
+@dataclass_json
+@dataclass
+class ForecastedValue:
+    """/*Represent the number of requests for a time T*/"""
+    TimeStamp: datetime = _timestamp("timestamp")
+    Requests: float = _f("requests", 0.0)
+
+
+# types/types_forecasting.go:23
+@dataclass_json
+@dataclass
+class Forecast:
+    """/*Set of values received from the Forecasting component*/"""
+    # IDdb: str=""                                # `bson:"_id"`
+    ServiceName: str = _f("service_name", "")
+    ForecastedValues: list[ForecastedValue] = _f("values", df=list)
+    TimeWindowStart: datetime = _timestamp("start_time")
+    TimeWindowEnd: datetime = _timestamp("end_time")
+    IDPrediction: str = _f("id_predictions", "")
