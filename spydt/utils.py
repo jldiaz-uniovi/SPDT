@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Tuple
 from .model import (
     Limit, ContainersConfig, Const, ScalingAction, State, Const, VMScale, VmProfile,
-    SystemConfiguration, Error, MSCSimpleSetting
+    SystemConfiguration, Error, MSCSimpleSetting, ConfigMetrics
 )
 
 from .storage import GetPerformanceProfileDAO, GetPredictedReplicas
@@ -88,10 +88,10 @@ def DeltaVMSet(current:VMScale, candidate:VMScale) -> Tuple[VMScale,VMScale]:
         @VMScale	- Map with VM cluster of the VMs that were added into the candidate VM set
         @VMScale	- Map with VM cluster of the VMs that were removed from the candidate VM set
     """
-    delta = VMScale()
-    startSet = VMScale()
-    shutdownSet = VMScale()
-    sameSet = VMScale()
+    delta = VMScale({})
+    startSet = VMScale({})
+    shutdownSet = VMScale({})
+    sameSet = VMScale({})
 
     for k in current: 
         if k in candidate:
@@ -174,11 +174,49 @@ def computeVMBootingTime(vmsScale: VMScale, sysConfiguration: SystemConfiguratio
     """
     return bootTime
 
-# planner/derivation/policies_derivation.go:349 TODO WIP
+# planner/derivation/policies_derivation.go:164 TODO: access database or mock it
+def computeVMTerminationTime(vmsScale: VMScale, sysConfiguration: SystemConfiguration) -> float:
+    """
+    Compute the termination time of a set of VMs
+    in:
+        @vmsScale types.VMScale
+        @sysConfiguration SystemConfiguration
+    out:
+        @int	Time in seconds that the termination wil take
+    """
+    terminationTime = 0.0
+    # Check in db if already data is stored
+    """
+    vmBootingProfileDAO := storage.GetVMBootingProfileDAO()
+
+    //Call API
+    for vmType, n := range vmsScale {
+        times, err := vmBootingProfileDAO.BootingShutdownTime(vmType, n)
+        if err != nil {
+            url := sysConfiguration.PerformanceProfilesComponent.Endpoint + util.ENDPOINT_VM_TIMES
+            csp := sysConfiguration.CSP
+            region := sysConfiguration.Region
+            times, err = performance_profiles.GetBootShutDownProfileByType(url,vmType, n, csp, region)
+            if err != nil {
+                log.Error("Error in terminationTime query for type %s %d VMS. Details: %s", vmType, n, err.Error())
+                log.Warning("Takes default shutdown")
+                times.ShutDownTime = util.DEFAULT_VM_SHUTDOWN_TIME
+            } else {
+                vmBootingProfile,_ := vmBootingProfileDAO.FindByType(vmType)
+                vmBootingProfile.InstancesValues = append(vmBootingProfile.InstancesValues, times)
+                vmBootingProfileDAO.UpdateByType(vmType, vmBootingProfile)
+            }
+        }
+        terminationTime += times.ShutDownTime
+    }
+    """
+    return terminationTime
+
+# planner/derivation/policies_derivation.go:349
 def setScalingSteps(scalingSteps: list[ScalingAction], 
                     currentState: State, newState: State, 
                     timeStart: datetime, timeEnd: datetime,
-                    totalServicesBooting:float,
+                    totalServicesBootingTime: float,
                     stateLoadCapacity:float) -> None:
     # This function returns None, because the scalingSteps are stored 
     # in-place in the first parameter
@@ -189,7 +227,7 @@ def setScalingSteps(scalingSteps: list[ScalingAction],
         # var deltaTime int //time in seconds
         shutdownVMDuration = 0.0
         startTransitionTime = datetime.now()
-        currentVMSet = VMScale()
+        currentVMSet = VMScale({})
         currentVMSet = currentState.VMs
         vmAdded, vmRemoved = DeltaVMSet(currentVMSet, newState.VMs)
         nVMRemoved = len(vmRemoved)
@@ -200,33 +238,30 @@ def setScalingSteps(scalingSteps: list[ScalingAction],
             if  scalingSteps:
                 shutdownVMDuration = computeVMTerminationTime(vmRemoved, systemConfiguration)
                 previousTimeEnd = scalingSteps[-1].TimeEnd
-                scalingSteps[-1].TimeEnd = previousTimeEnd + shutdownVMDuration
+                scalingSteps[-1].TimeEnd = previousTimeEnd + timedelta(seconds=shutdownVMDuration)
             startTransitionTime = computeScaleOutTransitionTime(vmAdded, True, timeStart, totalServicesBootingTime)
-        """        
-        } else if nVMRemoved > 0 && nVMAdded == 0 {
-            //case 2:  Scale in,
+        elif vmRemoved and not vmAdded:
+            # case 2:  Scale in,
             shutdownVMDuration = computeVMTerminationTime(vmRemoved, systemConfiguration)
-            startTransitionTime = timeStart.Add(-1 * time.Duration(shutdownVMDuration) * time.Second)
+            startTransitionTime = timeStart - timedelta(seconds=shutdownVMDuration)
+        elif (not vmRemoved and vmAdded) or (not vmRemoved and not vmAdded): # FIX: is this simply (not vmRemoved) ?
+            # case 3: Scale out
+            startTransitionTime = computeScaleOutTransitionTime(vmAdded, True, timeStart, totalServicesBootingTime)
 
-        } else if (nVMRemoved == 0 && nVMAdded > 0) || ( nVMRemoved == 0 && nVMAdded == 0 ) {
-            //case 3: Scale out
-            startTransitionTime = computeScaleOutTransitionTime(vmAdded, true, timeStart, totalServicesBootingTime)
-        }
-
-        //newState.LaunchTime = startTransitionTime
-        name,_ := structhash.Hash(newState, 1)
+        # // newState.LaunchTime = startTransitionTime
+        # 
+        """
+        name,_ := structhash.Hash(newState, 1)  # TODO: compute appropriate hash (?) (what is it used for?)
         newState.Hash = strings.Replace(name, "v1_", "", -1)
-        *scalingSteps = append(*scalingSteps,
-            types.ScalingAction{
-                InitialState:currentState,
-                DesiredState:        newState,
-                TimeStart:           timeStart,
-                TimeEnd:             timeEnd,
-                Metrics:             types.ConfigMetrics{RequestsCapacity:stateLoadCapacity,},
-                TimeStartTransition: startTransitionTime,
-            })
-    }
-    """
+        """
+        scalingSteps.append(ScalingAction(
+            InitialState=currentState,
+            DesiredState=newState,
+            TimeStart=timeStart,
+            TimeEnd=timeEnd,
+            Metrics=ConfigMetrics(RequestsCapacity=stateLoadCapacity),
+            TimeStartTransition=startTransitionTime,
+        ))
 
 def maxPodsCapacityInVM(vmProfile: VmProfile, resourceLimit: Limit) -> int:
     # For memory resources, Kubernetes Engine reserves aprox 6% of cores and 25% of Mem

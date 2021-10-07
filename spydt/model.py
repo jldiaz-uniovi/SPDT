@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import NewType
 
 @dataclass
 class Error:
@@ -78,11 +79,11 @@ class ServiceInfo: # types/type_policies.go#111
     Memory: float=0.0   # `json:"Mem_gb"`
 
 
-VMScale = dict[str, int] # types/types_policies.go:15
+VMScale = NewType("VMScale", dict[str, int]) # types/types_policies.go:15
 # Number of VMs of each type
 
 
-Service = dict[str, ServiceInfo] # types/types_policies.go:12
+Service = NewType("Service", dict[str, ServiceInfo]) # types/types_policies.go:12
 # Service keeps the name and scale of the scaled service
 
 @dataclass
@@ -102,8 +103,7 @@ class Component:
 
 
 @dataclass
-class SystemConfiguration:  # util/config.go:42  TODO
-    # TODO: Implemented only the fields requiered for the naive strategy
+class SystemConfiguration:  # util/config.go:42  TODO: Implemented only the fields requiered for the naive strategy
     # Host                         string            # `yaml:"host"`
     # CSP                          string            # `yaml:"CSP"`
     # Region                       string            # `yaml:"region"`
@@ -129,9 +129,9 @@ class StateLoadCapacity: # types/type_policies.go:111
 @dataclass
 class State: # types/type_policies.go:98
     "DesiredState is the metadata of the state expected to scale to"
-    Services: Service = field(default_factory=dict)  # `json:"Services"`
-    Hash: str = ""                                   # `json:"Hash"`
-    VMs: VMScale = field(default_factory=dict)       # `json:"VMs"`    
+    Services: Service = Service({})  # `json:"Services"`
+    Hash: str = ""                   # `json:"Hash"`
+    VMs: VMScale = VMScale({})       # `json:"VMs"`    
 
 @dataclass
 class CriticalInterval: # types/types_forecasting.go:9
@@ -159,7 +159,7 @@ class Limit: # types/types_performance_profiles.go:32
 class ContainersConfig: # types/types_policies.go:224
     Limits: Limit=Limit()              # `json:"limits" bson:"limits"`
     MSCSetting: MSCSimpleSetting =MSCSimpleSetting() # `json:"mscs" bson:"mscs"`
-    VMSet: VMScale=field(default_factory=dict)           # `json:"vms" bson:"vms"`
+    VMSet: VMScale=VMScale({})           # `json:"vms" bson:"vms"`
     Cost: float=0.0                      # `json:"cost" bson:"cost"`
 
 

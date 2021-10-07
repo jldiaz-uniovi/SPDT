@@ -18,4 +18,4 @@ class BestResourcePairPolicy(AbstractPolicy):
         return []
 
     def FindSuitableVMs(self, numberPods: int, limits: Limit) -> VMScale:
-        return VMScale()
+        return VMScale({})

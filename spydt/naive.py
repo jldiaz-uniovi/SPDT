@@ -2,7 +2,7 @@ from datetime import datetime
 import math
 
 from .model import (Const, Limit, Policy, PolicyMetrics, ProcessedForecast,
-                    ScalingAction, ServiceInfo, State, VMScale)
+                    ScalingAction, ServiceInfo, Service, State, VMScale)
 from .policy import AbstractPolicy
 from .utils import (adjustGranularity, estimatePodsConfiguration,
                     setScalingSteps, maxPodsCapacityInVM)
@@ -22,7 +22,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
                 vmType = k
                 memGB =  self.mapVMProfiles[k].Memory
         if len(self.currentState.VMs) > 1:
-            print("Current config has more than one VM type, type %s was selected to continue", vmType)  # TODO: use logging
+            print("Current config has more than one VM type, type %s was selected to continue", vmType)  # FIX: use logging
         return vmType
     
     def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:
@@ -44,7 +44,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
             totalServicesBootingTime = containerConfigOver.MSCSetting.BootTimeSec
             resourceLimits = containerConfigOver.Limits
 
-            services: dict[str, ServiceInfo] = {} # make(map[string]types.ServiceInfo)
+            services = Service({}) # make(map[string]types.ServiceInfo)
             services[self.sysConfiguration.MainServiceName] = ServiceInfo(
                 Scale=  newNumPods,
                 CPU=    resourceLimits.CPUCores,
@@ -58,20 +58,20 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
             # update state before next iteration
             timeStart = it.TimeStart
             timeEnd = it.TimeEnd
-            systemConfiguration = self.sysConfiguration  # TODO: ¿sale de self? En el original parecía tomarlo de una variable global en el módulo util
+            systemConfiguration = self.sysConfiguration  # FIX: ¿sale de self? En el original parecía tomarlo de una variable global en el módulo util
             stateLoadCapacity = adjustGranularity(systemConfiguration.ForecastComponent.Granularity, stateLoadCapacity)
             setScalingSteps(scalingActions, self.currentState, state, timeStart, timeEnd, totalServicesBootingTime, stateLoadCapacity)
             self.currentState = state
         parameters = {}
-        parameters[Const.METHOD] = Const.SCALE_METHOD_HORIZONTAL
-        parameters[Const.ISHETEREOGENEOUS] = str(False)
-        parameters[Const.ISRESIZEPODS] = str(False)
+        parameters[Const.METHOD.value] = Const.SCALE_METHOD_HORIZONTAL.value
+        parameters[Const.ISHETEREOGENEOUS.value] = "false"
+        parameters[Const.ISRESIZEPODS.value] = "false"
         # Add new policy
         numConfigurations = len(scalingActions)
         newPolicy.ScalingActions = scalingActions
         newPolicy.Algorithm = self.algorithm
-        # newPolicy.ID = bson.NewObjectId()  # TODO
-        newPolicy.Status = str(Const.DISCARTED)  # State by default
+        # newPolicy.ID = bson.NewObjectId()  # TODO: use pymongo.objectid
+        newPolicy.Status = Const.DISCARTED.value  # State by default
         newPolicy.Parameters = parameters
         newPolicy.Metrics.NumberScalingActions = numConfigurations
         newPolicy.Metrics.FinishTimeDerivation = datetime.now()
@@ -81,8 +81,8 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         policies.append(newPolicy)
         return policies
 
-    def FindSuitableVMs(self, numberPods: int, limits: Limit) -> VMScale: # TODO
-        vmScale = VMScale()
+    def FindSuitableVMs(self, numberPods: int, limits: Limit) -> VMScale:
+        vmScale = VMScale({})
         vmType = self.currentVMType()
         profile = self.mapVMProfiles[vmType]
         podsCapacity = maxPodsCapacityInVM(profile, limits)
