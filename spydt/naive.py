@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 import math
 
 from .model import (Const, Limit, Policy, PolicyMetrics, ProcessedForecast,
@@ -26,15 +25,15 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
             print("Current config has more than one VM type, type %s was selected to continue", vmType)  # TODO: use logging
         return vmType
     
-    def CreatePolicies(self, processedForecast: ProcessedForecast) -> List[Policy]:
-        policies: List[Policy] = []
+    def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:
+        policies: list[Policy] = []
         serviceToScale = self.currentState.Services[self.sysConfiguration.MainServiceName]
         currentPodLimits = Limit(CPUCores=serviceToScale.CPU, MemoryGB=serviceToScale.Memory)
 
         newPolicy = Policy()
         state = State()
         newPolicy.Metrics = PolicyMetrics(StartTimeDerivation=datetime.now())
-        scalingActions: List[ScalingAction] = []
+        scalingActions: list[ScalingAction] = []
         for it in processedForecast.CriticalIntervals:
             resourceLimits = Limit()
             # Select the performance profile that fits better
@@ -45,7 +44,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
             totalServicesBootingTime = containerConfigOver.MSCSetting.BootTimeSec
             resourceLimits = containerConfigOver.Limits
 
-            services = {} # make(map[string]types.ServiceInfo)
+            services: dict[str, ServiceInfo] = {} # make(map[string]types.ServiceInfo)
             services[self.sysConfiguration.MainServiceName] = ServiceInfo(
                 Scale=  newNumPods,
                 CPU=    resourceLimits.CPUCores,
@@ -83,7 +82,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         return policies
 
     def FindSuitableVMs(self, numberPods: int, limits: Limit) -> VMScale: # TODO
-        vmScale = {}
+        vmScale = VMScale()
         vmType = self.currentVMType()
         profile = self.mapVMProfiles[vmType]
         podsCapacity = maxPodsCapacityInVM(profile, limits)

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import math
 from datetime import datetime
-from typing import List, Tuple
+from typing import Tuple
 from .model import (
     Limit, ContainersConfig, Const, ScalingAction, State, Const, VMScale, VmProfile,
     SystemConfiguration, Error, MSCSimpleSetting
@@ -78,7 +78,7 @@ def adjustGranularity(granularity: str, capacityInSeconds: float) -> float:
     return factor*capacityInSeconds
 
 
-def setScalingSteps(scalingSteps: List[ScalingAction], 
+def setScalingSteps(scalingSteps: list[ScalingAction], 
                     currentState: State, newState: State, 
                     timeStart: datetime, timeEnd: datetime,
                     totalServicesBooting:float,

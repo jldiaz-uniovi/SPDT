@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Mapping, List
-
 
 @dataclass
 class Error:
@@ -80,11 +78,11 @@ class ServiceInfo: # types/type_policies.go#111
     Memory: float=0.0   # `json:"Mem_gb"`
 
 
-VMScale = Mapping[str, int] # types/types_policies.go:15
+VMScale = dict[str, int] # types/types_policies.go:15
 # Number of VMs of each type
 
 
-Service = Mapping[str, ServiceInfo] # types/types_policies.go:12
+Service = dict[str, ServiceInfo] # types/types_policies.go:12
 # Service keeps the name and scale of the scaled service
 
 @dataclass
@@ -133,7 +131,7 @@ class State: # types/type_policies.go:98
     "DesiredState is the metadata of the state expected to scale to"
     Services: Service = field(default_factory=dict)  # `json:"Services"`
     Hash: str = ""                                   # `json:"Hash"`
-    VMs: VMScale = field(default_factory=dict)       #  `json:"VMs"`    
+    VMs: VMScale = field(default_factory=dict)       # `json:"VMs"`    
 
 @dataclass
 class CriticalInterval: # types/types_forecasting.go:9
@@ -168,7 +166,7 @@ class ContainersConfig: # types/types_policies.go:224 # TODO
 @dataclass
 class ProcessedForecast: # types/types_forecasting.go:33
     """ProcessedForecast metadata after processing the time serie"""
-    CriticalIntervals: List[CriticalInterval] = field(default_factory=list)
+    CriticalIntervals: list[CriticalInterval] = field(default_factory=list)
 
 
 @dataclass
@@ -216,8 +214,8 @@ class Policy: # types/types_policies.go:201
     Algorithm:str = ""                       # `json:"algorithm" bson:"algorithm"`
     Metrics: PolicyMetrics = PolicyMetrics() # `json:"metrics" bson:"metrics"`
     Status: str = ""                         # `json:"status" bson:"status"`
-    Parameters: Mapping[str,str]=field(default_factory=dict)        # `json:"parameters" bson:"parameters"`
-    ScalingActions: List[ScalingAction]=field(default_factory=list) # `json:"scaling_actions" bson:"scaling_actions"`
+    Parameters: dict[str,str]=field(default_factory=dict)        # `json:"parameters" bson:"parameters"`
+    ScalingActions: list[ScalingAction]=field(default_factory=list) # `json:"scaling_actions" bson:"scaling_actions"`
     TimeWindowStart: datetime = datetime.now()    # `json:"window_time_start"  bson:"window_time_start"`
     TimeWindowEnd:   datetime = datetime.now()    # `json:"window_time_end"  bson:"window_time_end"`
 
@@ -225,7 +223,7 @@ class Policy: # types/types_policies.go:201
 @dataclass
 class PerformanceProfile:
 	ID: str=""                                                          # `bson:"_id" json:"id"`
-	MSCSettings: List[MSCSimpleSetting] = field(default_factory=list)   # `json:"mscs" bson:"mscs"`
+	MSCSettings: list[MSCSimpleSetting] = field(default_factory=list)   # `json:"mscs" bson:"mscs"`
 	_Limit: Limit = Limit()                                             # `json:"limits" bson:"limits"`
 
 @dataclass
