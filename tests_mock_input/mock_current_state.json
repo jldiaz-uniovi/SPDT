@@ -2,8 +2,8 @@
   "active": {
     "Services": {
       "primeapp": {
-        "Cpu_cores": 0.2,
-        "Mem_gb": 0.2,
+        "Cpu": "200m",
+        "Memory": 200000000,
         "Replicas": 2
       }
     },
@@ -20,8 +20,8 @@
   "lastDeployed": {
     "Services": {
       "primeapp": {
-        "Cpu_cores": 0.1,
-        "Mem_gb": 0.1,
+        "Cpu": "100m",
+        "Memory": 100000000,
         "Replicas": 1
       }
     },

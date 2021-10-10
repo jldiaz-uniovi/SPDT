@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"net/http"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func main () {
+func main() {
 
 	router := gin.Default()
 	//Expected VMs json
@@ -16,19 +17,19 @@ func main () {
 	//Expected forecast json
 	router.GET("/predict", forecast)
 	//Expected profiles json
-	router.GET("/getRegressionTRNsMongoDBAll/:apptype/:appname", profiles)
+	router.GET("/getRegressionTRNsMongoDBAll/:apptype/:appname/:mainservicename", profiles)
 	//Expected VMs json
 	router.GET("/api/vms", vms)
 	//Expected Current DesiredState json
 	router.GET("/api/current", currentState)
 	//Expected  All VM  Times
-	router.GET("/getAllVMTypesBootShutDownDataAvg",allVMsTimes )
+	router.GET("/getPerVMTypeAllBootShutDownData", allVMsTimes)
 	//Expected   VM  Times
 	router.GET("/getPerVMTypeOneBootShutDownData", vmsTimes)
 	router.Run(":8081")
 }
 
-func forecast(c *gin.Context){
+func forecast(c *gin.Context) {
 	// Open jsonFile
 	data, err := ioutil.ReadFile("tests_mock_input/mock_forecast_test.json")
 	if err != nil {
@@ -40,8 +41,7 @@ func forecast(c *gin.Context){
 	c.JSON(http.StatusOK, forecast)
 }
 
-
-func profiles(c *gin.Context){
+func profiles(c *gin.Context) {
 	// Open jsonFile
 	data, err := ioutil.ReadFile("tests_mock_input/performance_profiles_test.json")
 	if err != nil {
@@ -55,7 +55,7 @@ func profiles(c *gin.Context){
 	c.JSON(http.StatusOK, profile)
 }
 
-func vms(c *gin.Context){
+func vms(c *gin.Context) {
 	// Open jsonFile
 	data, err := ioutil.ReadFile("tests_mock_input/vm_profiles.json")
 	if err != nil {
@@ -69,7 +69,7 @@ func vms(c *gin.Context){
 	c.JSON(http.StatusOK, vms)
 }
 
-func currentState(c *gin.Context){
+func currentState(c *gin.Context) {
 	// Open jsonFile
 	data, err := ioutil.ReadFile("tests_mock_input/mock_current_state.json")
 	if err != nil {
@@ -83,12 +83,12 @@ func currentState(c *gin.Context){
 	c.JSON(http.StatusOK, state)
 }
 
-func allVMsTimes(c *gin.Context){
+func allVMsTimes(c *gin.Context) {
 	appraoch := c.DefaultQuery("appraoch", "")
-	csp := c.DefaultQuery("csp","")
-	instanceType := c.DefaultQuery("instanceType","")
-	numInstances := c.DefaultQuery("numInstances","")
-	region := c.DefaultQuery("region","")
+	csp := c.DefaultQuery("csp", "")
+	instanceType := c.DefaultQuery("instanceType", "")
+	numInstances := c.DefaultQuery("numInstances", "")
+	region := c.DefaultQuery("region", "")
 
 	// Open jsonFile
 	data, err := ioutil.ReadFile("tests_mock_input/mock_vms_all_times.json")
@@ -103,7 +103,7 @@ func allVMsTimes(c *gin.Context){
 	c.JSON(http.StatusOK, state)
 }
 
-func vmsTimes(c *gin.Context){
+func vmsTimes(c *gin.Context) {
 	// Open jsonFile
 	data, err := ioutil.ReadFile("tests_mock_input/mock_vms_times.json")
 	if err != nil {
@@ -117,7 +117,7 @@ func vmsTimes(c *gin.Context){
 	c.JSON(http.StatusOK, state)
 }
 
-func subscribe(c *gin.Context){
+func subscribe(c *gin.Context) {
 	r := c.Request.Body
 	c.JSON(http.StatusOK, r)
 }

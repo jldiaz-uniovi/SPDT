@@ -1,0 +1,9 @@
+export PROFILESDB_USER=spdt
+export PROFILESDB_PASS=spdt
+export PROFILESDB_HOST=localhost:27016
+export POLICIESDB_USER=spdt
+export POLICIESDB_PASS=spdt
+export POLICIESDB_HOST=localhost:27018
+export FORECASTDB_USER=spdt
+export FORECASTDB_PASS=spdt
+export FORECASTDB_HOST=localhost:27019

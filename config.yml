@@ -1,6 +1,6 @@
 app-name: movieapp
-main-service-name: movieapp
-app-type: dbaccess
+main-service-name: primeapp
+app-type: db-access
 host: http://35.225.174.194:8083
 CSP: AWS
 region: us-east-2
@@ -13,13 +13,16 @@ scaling-horizon:
 forecasting-component:
   granularity: h
   #endpoint: http://7449253b.ngrok.io
-  endpoint: http://172.29.39.209:8081
+  # endpoint: http://172.29.39.209:8081
+  endpoint: http://156.35.151.156:8081
 performance-profiles-component:
   #endpoint: http://141.40.254.24:8082
-  endpoint: http://terminus.dyndns.lrz.de:8082
+  # endpoint: http://terminus.dyndns.lrz.de:8082
+  endpoint: http://156.35.151.156:8081
 scheduler-component:
   #endpoint: http://172.29.39.209:8081
-  endpoint: http://172.29.39.209:5555
+  # endpoint: http://172.29.39.209:5555
+  endpoint: http://156.35.151.156:8081
 preferred-algorithm: all
 pulling-interval: 60
 storage-interval: 1M
