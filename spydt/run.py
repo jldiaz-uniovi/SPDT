@@ -4,7 +4,12 @@ from typing import Tuple
 
 from .model import Error, Policy, SystemConfiguration
 from .util import ReadConfigFile
-from .mock_storage import FetchApplicationProfile, fetchForecast
+from .mock_storage import (
+    FetchApplicationProfile, 
+    fetchForecast,
+    ReadVMProfiles,
+    FetchVMBootingProfiles
+)
 
 # cmd/cmd_derive_policy.go:23
 # Heavily adapted: most command-line options are hardcoded
@@ -41,17 +46,19 @@ def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfigurati
     if err.error:
         return Policy(), err
     
-    """
+    
     # Get VM Profiles
     vmProfiles, err = ReadVMProfiles()
     if err.error:
         return Policy(), err
+    
     
     # Get VM booting Profiles
     err = FetchVMBootingProfiles(sysConfiguration, vmProfiles)
     if err.error:
         return Policy(), err
 
+    """
     updateForecastInDB(forecast, sysConfiguration)
 
     policyDAO = GetPolicyDAO(mainService)

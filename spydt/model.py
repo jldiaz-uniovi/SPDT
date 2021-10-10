@@ -13,8 +13,11 @@ def _f(fn=None, dv=None, df=None):
 def parse_date(isodate: str) -> datetime:
     return datetime.fromisoformat(isodate.replace("Z", "+00:00"))
 
+def date_to_iso(date: datetime) -> str:
+    return datetime.isoformat(date) + "Z"
+
 def _timestamp(fn=None):
-    return field(metadata=config(field_name=fn, encoder=datetime.isoformat, decoder=parse_date),
+    return field(metadata=config(field_name=fn, encoder=date_to_iso, decoder=parse_date),
         default_factory=datetime.now)
 
 @dataclass
@@ -134,8 +137,8 @@ class PricingModel_:
 @dataclass_json
 @dataclass
 class PolicySettings_:
-	ScalingMethod: str = _f("vm-scaling-method", "")
-	PreferredMetric: str = _f("preferred-metric", "")
+    ScalingMethod: str = _f("vm-scaling-method", "")
+    PreferredMetric: str = _f("preferred-metric", "")
 
 
 @dataclass_json
@@ -311,3 +314,23 @@ class Forecast:
     TimeWindowStart: datetime = _timestamp("start_time")
     TimeWindowEnd: datetime = _timestamp("end_time")
     IDPrediction: str = _f("id_predictions", "")
+
+
+# types/types_performance_profiles.go:19
+@dataclass_json
+@dataclass
+class BootShutDownTime:
+    """//Times in seconds"""
+    NumInstances: int = _f("NumInstances", 0)
+    BootTime: float = _f("BootTime", 0.0)
+    ShutDownTime: float = _f("ShutDownTime", 0.0)
+
+
+# types/types_performance_profiles.go:27
+@dataclass_json
+@dataclass
+class InstancesBootShutdownTime:
+    """//Times in seconds"""
+    InstancesValues: list[BootShutDownTime] = _f("InstanceValues", df=BootShutDownTime)
+    VMType: str = _f("VMType", "")
+

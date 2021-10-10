@@ -1,9 +1,11 @@
 from datetime import datetime
 from typing import Tuple
 from .model import ( 
+    InstancesBootShutdownTime,
     SystemConfiguration, 
     Error, 
-    Forecast
+    Forecast,
+    VmProfile
     )
 
 
@@ -68,3 +70,53 @@ def fetchForecast(sysConfiguration: SystemConfiguration, timeStart: datetime, ti
     except Exception as e:
         return Forecast(), Error(f"Unable to read JSON forecast: {e}")
     return forecast, Error()
+
+
+# server/start.go:134
+def ReadVMProfiles()   -> Tuple[list[VmProfile], Error]:
+    err = Error()
+    vmProfiles: list[VmProfile] = []
+    try:
+        with open("vm_profiles.json") as f:
+            data = f.read()
+        vmProfiles = VmProfile.schema().loads(data, many=True)  # type: ignore
+    except Exception as e:
+        # print(e) # TODO: Log
+        err.error = f"{e}"
+    vmProfiles.sort(key=lambda x: x._Pricing.Price)
+    return vmProfiles, err
+
+
+# server/start.go:156
+def FetchVMBootingProfiles(sysConfiguration: SystemConfiguration, vmProfiles: list[VmProfile]) -> Error:
+    # TODO: Read from database
+    # Currently an example JSON is used as data source
+	err = Error()
+	vmBootingProfile = InstancesBootShutdownTime()
+    try:
+        with open("tests_mock_input/mock_vms_all_times.json") as f:
+            data = f.read()
+            vmBootingProfile = VmProfile.schema().loads(data, many=True)  # type: ignore    except Exception as e:
+        return Forecast(), Error(f"Unable to read JSON forecast: {e}")
+    return Error()
+
+    """
+	vmBootingProfileDAO := storage.GetVMBootingProfileDAO()
+	storedVMBootingProfiles,_ := vmBootingProfileDAO.FindAll()
+	if len(storedVMBootingProfiles) == 0 {
+		log.Info("Start request VM booting Profiles")
+		endpoint := sysConfiguration.PerformanceProfilesComponent.Endpoint + util.ENDPOINT_ALL_VM_TIMES
+		csp := sysConfiguration.CSP
+		region := sysConfiguration.Region
+		for _, vm := range vmProfiles {
+			vmBootingProfile, err = Pservice.GetAllBootShutDownProfilesByType(endpoint, vm.Type, region, csp)
+			if err != nil {
+				log.Error("Error in request VM Booting Profile for type %s. %s",vm.Type, err.Error())
+			}
+			vmBootingProfile.VMType = vm.Type
+			vmBootingProfileDAO.Insert(vmBootingProfile)
+		}
+		log.Info("Finish request VM booting Profiles")
+	}
+	return err
+    """
