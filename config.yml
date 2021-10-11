@@ -23,7 +23,7 @@ scheduler-component:
   #endpoint: http://172.29.39.209:8081
   # endpoint: http://172.29.39.209:5555
   endpoint: http://156.35.151.156:8081
-preferred-algorithm: all
+preferred-algorithm: naive
 pulling-interval: 60
 storage-interval: 1M
 policy-settings:

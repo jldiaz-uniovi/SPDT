@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import List, NewType
-from dataclasses_json import dataclass_json, config
+from dataclasses_json import dataclass_json, config, Undefined
 
 def _f(fn=None, dv=None, df=None):
     if df:
@@ -284,7 +284,7 @@ class MaxServiceCapacity: # types/types_performance_profiles.go:58
     RegBruteForce  : float = _f("RegBruteForce", 0.0)
     RegSmart       : float = _f("RegSmart", 0.0)
 
-@dataclass_json
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass
 class MSCCompleteSetting: # types/types_performance_profiles.go:77
     Replicas: int = _f("Replicas", 0)
@@ -334,3 +334,19 @@ class InstancesBootShutdownTime:
     InstancesValues: list[BootShutDownTime] = _f("InstanceValues", df=BootShutDownTime)
     VMType: str = _f("VMType", "")
 
+@dataclass_json
+@dataclass
+class _Profile:
+    Limits: Limit_ = _f("Limits", df=Limit_)
+    MSCs: list[MSCCompleteSetting] = _f("MSCs", df=MSCCompleteSetting)
+
+
+@dataclass_json
+@dataclass
+class ServicePerformanceProfile:
+    HostInstanceType: str = _f("HostInstanceType", "")
+    ServiceName: str = _f("ServiceName", "")
+    MainServiceName: str = _f("MainServiceName", "")
+    ServiceType: str = _f("ServiceType", "")
+    TestAPI: str = _f("TestAPI", "")
+    Profiles: list[_Profile] = _f("Profiles", df=_Profile)

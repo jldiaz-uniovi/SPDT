@@ -37,7 +37,7 @@ def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfigurati
     mainService = sysConfiguration.MainServiceName
 
     # Request Performance Profiles
-    error = FetchApplicationProfile(sysConfiguration)  # Does nothing (TODO)
+    error = FetchApplicationProfile(sysConfiguration)
     if error.error:
         return Policy(),error
 
