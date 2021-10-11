@@ -171,9 +171,9 @@ class StateLoadCapacity: # types/type_policies.go:111
 @dataclass
 class State: # types/type_policies.go:98
     "DesiredState is the metadata of the state expected to scale to"
-    Services: Service = _f("Services", df=Service)
+    Services: Service = _f("Services", df=lambda: Service({}))
     Hash: str = _f("Hash", "")
-    VMs: VMScale = _f("VMs", df=VMScale)
+    VMs: VMScale = _f("VMs", df=lambda: VMScale({}))
 
 @dataclass_json
 @dataclass
@@ -308,7 +308,7 @@ class ForecastedValue:
 @dataclass
 class Forecast:
     """/*Set of values received from the Forecasting component*/"""
-    # IDdb: str=""                                # `bson:"_id"`
+    IDdb: str=""                                # `bson:"_id"`
     ServiceName: str = _f("service_name", "")
     ForecastedValues: list[ForecastedValue] = _f("values", df=list)
     TimeWindowStart: datetime = _timestamp("start_time")
@@ -350,3 +350,20 @@ class ServicePerformanceProfile:
     ServiceType: str = _f("ServiceType", "")
     TestAPI: str = _f("TestAPI", "")
     Profiles: list[_Profile] = _f("Profiles", df=_Profile)
+
+@dataclass_json
+@dataclass
+class ServiceToSchedule:
+    Scale: int = _f("Replicas", 0)
+    CPU: str = _f("Cpu", "")
+    Memory: int = _f("Memory")
+
+
+@dataclass_json
+@dataclass
+class StateToSchedule:
+    LaunchTime: datetime = _timestamp("ISODate")
+    Services: dict[str, ServiceToSchedule] = _f("Services", df=dict)
+    Name: str = _f("Name", "")
+    VMs: VMScale = _f("VMs", df=VMScale)
+    ExpectedStart: datetime = _timestamp("ExpectedTime")

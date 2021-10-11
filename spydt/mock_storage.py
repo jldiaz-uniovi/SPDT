@@ -1,5 +1,5 @@
 from datetime import datetime
-from .model import Error
+from .model import Error, State, StateToSchedule
 from typing import Tuple
 
 from spydt.aux_func import MillisecondsToSeconds
@@ -14,7 +14,7 @@ from .model import (
     VmProfile
     )
 
-storedPerformanceProfiles: list[ServicePerformanceProfile] = []
+storedPerformanceProfiles: list[PerformanceProfile] = []
 
 # server/start.go:180
 def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
@@ -26,7 +26,7 @@ def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
     try:
         with open("tests_mock_input/performance_profiles_test.json") as f:
             data = f.read()
-        servicePerformanceProfile: ServicePerformanceProfile = ServicePerformanceProfile.schema().loads(data)
+        servicePerformanceProfile: ServicePerformanceProfile = ServicePerformanceProfile.schema().loads(data) # type: ignore
 
     except Exception as e:
         print(f"Error in request Performance Profiles: {e}")
@@ -77,16 +77,16 @@ def ReadVMProfiles()   -> Tuple[list[VmProfile], Error]:
     return vmProfiles, err
 
 
-vmBootingProfiles = []
+storedVmBootingProfiles: list[InstancesBootShutdownTime] = []
 
 
 # server/start.go:156
 def FetchVMBootingProfiles(sysConfiguration: SystemConfiguration, vmProfiles: list[VmProfile]) -> Error:
     # TODO: Populate database. Currently stores all in a global var
     # Currently an example JSON is used as data source
-    global vmBootingProfiles
+    global storedVmBootingProfiles
     err = Error()
-    if vmBootingProfiles:
+    if storedVmBootingProfiles:
         return err
     
     for vm in vmProfiles:
@@ -95,29 +95,97 @@ def FetchVMBootingProfiles(sysConfiguration: SystemConfiguration, vmProfiles: li
                 data = f.read()
             vmBootingProfile: InstancesBootShutdownTime = InstancesBootShutdownTime.schema().loads(data)  # type: ignore
             vmBootingProfile.VMType = vm.Type
-            vmBootingProfiles.append(vmBootingProfile)
+            storedVmBootingProfiles.append(vmBootingProfile)
         except Exception as e:
             err.error = f"{e}"
-            print(f"Error in request VM Booting Profile for type {vm.type}: {e}")  # TODO: log
+            print(f"Error in request VM Booting Profile for type {vm.Type}: {e}")  # TODO: log
     return err
 
+
+storedForecast: list[Forecast] = []
+
+def updateForecastInDB(forecast: Forecast, sysConfiguration: SystemConfiguration) -> Error:
+    """Updates the forecast in mongo database (mocked, uses global vars)"""
+    timeStart = forecast.TimeWindowStart
+    timeEnd = forecast.TimeWindowEnd
+    mainService = sysConfiguration.MainServiceName
+
+    # TODO: find forecast by time window
     """
-    vmBootingProfileDAO := storage.GetVMBootingProfileDAO()
-    storedVMBootingProfiles,_ := vmBootingProfileDAO.FindAll()
-    if len(storedVMBootingProfiles) == 0 {
-        log.Info("Start request VM booting Profiles")
-        endpoint := sysConfiguration.PerformanceProfilesComponent.Endpoint + util.ENDPOINT_ALL_VM_TIMES
-        csp := sysConfiguration.CSP
-        region := sysConfiguration.Region
-        for _, vm := range vmProfiles {
-            vmBootingProfile, err = Pservice.GetAllBootShutDownProfilesByType(endpoint, vm.Type, region, csp)
-            if err != nil {
-                log.Error("Error in request VM Booting Profile for type %s. %s",vm.Type, err.Error())
-            }
-            vmBootingProfile.VMType = vm.Type
-            vmBootingProfileDAO.Insert(vmBootingProfile)
+    //Retrieve data access to the database for forecasting
+    forecastDAO := storage.GetForecastDAO(mainService)
+    //Check if already exist, then update
+    resultQuery,err := forecastDAO.FindOneByTimeWindow(timeStart, timeEnd)
+    """
+    
+    if not storedForecast:
+        # If it is not already stored
+        forecast.IDdb = "arbitrary bson value"  # TODO
+        storedForecast.append(forecast)
+    else:
+        # TODO
+        """
+        id := resultQuery.IDdb
+        forecast.IDdb = id
+        if resultQuery.IDPrediction != forecast.IDPrediction {
+            subscribeForecastingUpdates(sysConfiguration, forecast.IDPrediction)
         }
-        log.Info("Finish request VM booting Profiles")
+        forecastDAO.Update(id, forecast)
+        """
+    return Error()
+
+
+
+def RetrieveCurrentState(endpoint: str ) -> Tuple[State, Error]:
+    ...  # TODO
+    return State(), Error()
+    """
+    policyState = State()
+    stateScheduled, _ := scheduler.InfraCurrentState(endpoint)
+    mapServicesScheduled := stateScheduled.Services
+    policyServices := make(map[string]types.ServiceInfo)
+
+    for k,v := range mapServicesScheduled {
+        mem := memBytesToGB(v.Memory)
+        cpu := stringToCPUCores(v.CPU)
+        replicas := v.Scale
+        policyServices[k] = types.ServiceInfo{
+            Memory:mem,
+            CPU:cpu,
+            Scale:replicas,
+        }
     }
-    return err
+
+    policyState = types.State {
+        VMs:stateScheduled.VMs,
+        Services:policyServices,
+    }
+    return policyState,nil
+    """
+
+
+
+
+def InfraCurrentState(endpoint: str) -> Tuple[StateToSchedule, Error]:
+    ... # TODO
+    return StateToSchedule(), Error()
+    """
+    currentState := StateToSchedule{}
+    infrastructureState := InfrastructureState{}
+    response, err := http.Get(endpoint)
+    if err != nil {
+        return currentState, err
+    }
+
+    defer response.Body.Close()
+    data, err := ioutil.ReadAll(response.Body)
+    if err != nil {
+        return  currentState, err
+    }
+    err = json.Unmarshal(data, &infrastructureState)
+    if err != nil {
+        return  currentState, err
+    }
+    currentState = infrastructureState.ActiveState
+    return  currentState, err
     """
