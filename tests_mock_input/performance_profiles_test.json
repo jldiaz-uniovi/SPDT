@@ -8,7 +8,7 @@
         "Limits":{
           "Cpu_cores":0.1,
           "Mem_gb":0.1,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -97,7 +97,7 @@
         "Limits":{
           "Cpu_cores":0.2,
           "Mem_gb":0.2,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -186,7 +186,7 @@
         "Limits":{
           "Cpu_cores":0.5,
           "Mem_gb":0.5,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -275,7 +275,7 @@
         "Limits":{
           "Cpu_cores":0.7,
           "Mem_gb":0.7,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -364,7 +364,7 @@
         "Limits":{
           "Cpu_cores":1,
           "Mem_gb":1,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -453,7 +453,7 @@
         "Limits":{
           "Cpu_cores":1,
           "Mem_gb":0.5,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -542,7 +542,7 @@
         "Limits":{
           "Cpu_cores":1,
           "Mem_gb":2,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -631,7 +631,7 @@
         "Limits":{
           "Cpu_cores":2,
           "Mem_gb":4,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -720,7 +720,7 @@
         "Limits":{
           "Cpu_cores":2,
           "Mem_gb":8,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
@@ -809,7 +809,7 @@
         "Limits":{
           "Cpu_cores":4,
           "Mem_gb":16,
-          "Request_per_sercond":0
+          "Request_per_second":0
         },
         "MSCs":[
           {
