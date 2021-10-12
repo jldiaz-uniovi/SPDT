@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import List, NewType
+from bson.objectid import ObjectId  # type: ignore
 from dataclasses_json import dataclass_json, config, Undefined
 
 def _f(fn=None, dv=None, df=None):
@@ -260,7 +261,7 @@ class ScalingAction: # types/types_policies.go
 @dataclass_json
 @dataclass
 class Policy: # types/types_policies.go:201
-    # ID              bson.ObjectId     ` bson:"_id" json:"id"`
+    ID: ObjectId = _f("id", df=ObjectId)
     Algorithm: str = _f("algorithm", "")
     Metrics: PolicyMetrics = _f("metrics", df=PolicyMetrics)
     Status: str = _f("status", "")
@@ -273,7 +274,7 @@ class Policy: # types/types_policies.go:201
 @dataclass_json
 @dataclass
 class PerformanceProfile:
-    ID: str = _f("_id", "")
+    ID: ObjectId = _f("_id", df=ObjectId)
     MSCSettings: list[MSCSimpleSetting] = _f("mscs", df=list)
     Limit: Limit_ = _f("limits", df=Limit_)
 
@@ -308,7 +309,7 @@ class ForecastedValue:
 @dataclass
 class Forecast:
     """/*Set of values received from the Forecasting component*/"""
-    IDdb: str=""                                # `bson:"_id"`
+    IDdb: ObjectId = _f("_id", df=ObjectId)
     ServiceName: str = _f("service_name", "")
     ForecastedValues: list[ForecastedValue] = _f("values", df=list)
     TimeWindowStart: datetime = _timestamp("start_time")
@@ -358,12 +359,21 @@ class ServiceToSchedule:
     CPU: str = _f("Cpu", "")
     Memory: int = _f("Memory")
 
+ServicesSchedule = NewType("ServicesSchedule", dict[str, ServiceToSchedule])
+
 
 @dataclass_json
 @dataclass
 class StateToSchedule:
     LaunchTime: datetime = _timestamp("ISODate")
-    Services: dict[str, ServiceToSchedule] = _f("Services", df=dict)
+    Services: ServicesSchedule = _f("Services", df=lambda: ServicesSchedule({}))
     Name: str = _f("Name", "")
-    VMs: VMScale = _f("VMs", df=VMScale)
+    VMs: VMScale = _f("VMs", df=lambda: VMScale({}))
     ExpectedStart: datetime = _timestamp("ExpectedTime")
+
+@dataclass_json
+@dataclass
+class InfrastructureState:
+    ActiveState: StateToSchedule = _f("active", df=StateToSchedule)
+    LastDeployedState: StateToSchedule = _f("lastDeployed", df=StateToSchedule)
+    isStateTrue: bool = _f("isStateTrue", False)

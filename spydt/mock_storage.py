@@ -1,29 +1,28 @@
 from datetime import datetime
-from .model import Error, State, StateToSchedule
 from typing import Tuple
 
-from spydt.aux_func import MillisecondsToSeconds
-from .model import ( 
-    InstancesBootShutdownTime,
-    MSCSimpleSetting,
-    PerformanceProfile,
-    ServicePerformanceProfile,
-    SystemConfiguration, 
-    Error, 
-    Forecast,
-    VmProfile
-    )
+from bson.objectid import ObjectId  # type: ignore
+
+from spydt.aux_func import (MillisecondsToSeconds, memBytesToGB,
+                            stringToCPUCores)
+
+from .model import (Error, Forecast, InfrastructureState,
+                    InstancesBootShutdownTime, MSCSimpleSetting,
+                    PerformanceProfile, Service, ServiceInfo,
+                    ServicePerformanceProfile, State, StateToSchedule,
+                    SystemConfiguration, VmProfile)
 
 storedPerformanceProfiles: list[PerformanceProfile] = []
 
 # server/start.go:180
 def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
     """//Fetch the performance profile of the microservice that should be scaled"""
-    # TODO: Store in database. Currently stores in a global variable
+    # LATER: Store in database. Currently stores in a global variable
     if storedPerformanceProfiles:
         return Error() # No error. Already stored. Do nothing
     
     try:
+        # LATER: Use REST API to retrieve info
         with open("tests_mock_input/performance_profiles_test.json") as f:
             data = f.read()
         servicePerformanceProfile: ServicePerformanceProfile = ServicePerformanceProfile.schema().loads(data) # type: ignore
@@ -43,7 +42,7 @@ def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
             )
             mscSettings.append(setting)
         performanceProfile = PerformanceProfile(
-            ID="arbitrary_hash",
+            ID=ObjectId(),
             Limit=p.Limits,
             MSCSettings=mscSettings
         )
@@ -52,7 +51,7 @@ def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
 
 
 def fetchForecast(sysConfiguration: SystemConfiguration, timeStart: datetime, timeEnd: datetime) -> Tuple[Forecast, Error]:
-    # TODO: Read from database
+    # LATER: Read from external API
     # Currently an example JSON is used as data source
     try:
         with open("tests_mock_input/mock_forecast_test.json") as f:
@@ -71,7 +70,7 @@ def ReadVMProfiles()   -> Tuple[list[VmProfile], Error]:
             data = f.read()
         vmProfiles = VmProfile.schema().loads(data, many=True)  # type: ignore
     except Exception as e:
-        # print(e) # TODO: Log
+        # print(e) # LATER: Log
         err.error = f"{e}"
     vmProfiles.sort(key=lambda x: x._Pricing.Price)
     return vmProfiles, err
@@ -82,7 +81,7 @@ storedVmBootingProfiles: list[InstancesBootShutdownTime] = []
 
 # server/start.go:156
 def FetchVMBootingProfiles(sysConfiguration: SystemConfiguration, vmProfiles: list[VmProfile]) -> Error:
-    # TODO: Populate database. Currently stores all in a global var
+    # LATER: Populate database. Currently stores all in a global var
     # Currently an example JSON is used as data source
     global storedVmBootingProfiles
     err = Error()
@@ -98,7 +97,7 @@ def FetchVMBootingProfiles(sysConfiguration: SystemConfiguration, vmProfiles: li
             storedVmBootingProfiles.append(vmBootingProfile)
         except Exception as e:
             err.error = f"{e}"
-            print(f"Error in request VM Booting Profile for type {vm.Type}: {e}")  # TODO: log
+            print(f"Error in request VM Booting Profile for type {vm.Type}: {e}")  # LATER: log
     return err
 
 
@@ -110,7 +109,7 @@ def updateForecastInDB(forecast: Forecast, sysConfiguration: SystemConfiguration
     timeEnd = forecast.TimeWindowEnd
     mainService = sysConfiguration.MainServiceName
 
-    # TODO: find forecast by time window
+    # LATER: find forecast by time window
     """
     //Retrieve data access to the database for forecasting
     forecastDAO := storage.GetForecastDAO(mainService)
@@ -120,10 +119,10 @@ def updateForecastInDB(forecast: Forecast, sysConfiguration: SystemConfiguration
     
     if not storedForecast:
         # If it is not already stored
-        forecast.IDdb = "arbitrary bson value"  # TODO
+        forecast.IDdb = ObjectId()
         storedForecast.append(forecast)
     else:
-        # TODO
+        # LATER
         """
         id := resultQuery.IDdb
         forecast.IDdb = id
@@ -137,55 +136,41 @@ def updateForecastInDB(forecast: Forecast, sysConfiguration: SystemConfiguration
 
 
 def RetrieveCurrentState(endpoint: str ) -> Tuple[State, Error]:
-    ...  # TODO
-    return State(), Error()
-    """
     policyState = State()
-    stateScheduled, _ := scheduler.InfraCurrentState(endpoint)
-    mapServicesScheduled := stateScheduled.Services
-    policyServices := make(map[string]types.ServiceInfo)
+    stateScheduled, _ = InfraCurrentState(endpoint)
+    mapServicesScheduled = stateScheduled.Services
+    policyServices: Service = Service({})
 
-    for k,v := range mapServicesScheduled {
-        mem := memBytesToGB(v.Memory)
-        cpu := stringToCPUCores(v.CPU)
-        replicas := v.Scale
-        policyServices[k] = types.ServiceInfo{
-            Memory:mem,
-            CPU:cpu,
-            Scale:replicas,
-        }
-    }
+    for k, v in mapServicesScheduled.items():
+        mem = memBytesToGB(v.Memory)
+        cpu = stringToCPUCores(v.CPU)
+        replicas = v.Scale
+        policyServices[k] = ServiceInfo(
+            Memory=mem,
+            CPU=cpu,
+            Scale=replicas,
+        )
 
-    policyState = types.State {
-        VMs:stateScheduled.VMs,
-        Services:policyServices,
-    }
-    return policyState,nil
-    """
+    policyState = State(
+        VMs = stateScheduled.VMs,
+        Services = policyServices,
+    )
+    return policyState, Error()
+
 
 
 
 
 def InfraCurrentState(endpoint: str) -> Tuple[StateToSchedule, Error]:
-    ... # TODO
-    return StateToSchedule(), Error()
-    """
-    currentState := StateToSchedule{}
-    infrastructureState := InfrastructureState{}
-    response, err := http.Get(endpoint)
-    if err != nil {
-        return currentState, err
-    }
+    # LATER: Use REST API to retrieve info
+    currentState = StateToSchedule()
+    infrastructureState = InfrastructureState()
+    try:
+        with open("tests_mock_input/mock_current_state.json") as f:
+            data = f.read()
+            infrastructureState = InfrastructureState.schema().loads(data)  # type: ignore
+    except Exception as e:
+        return currentState, Error(f"{e}")
 
-    defer response.Body.Close()
-    data, err := ioutil.ReadAll(response.Body)
-    if err != nil {
-        return  currentState, err
-    }
-    err = json.Unmarshal(data, &infrastructureState)
-    if err != nil {
-        return  currentState, err
-    }
     currentState = infrastructureState.ActiveState
-    return  currentState, err
-    """
+    return currentState, Error()

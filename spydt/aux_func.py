@@ -9,7 +9,7 @@ from .model import (
 
 from .storage import GetPerformanceProfileDAO, GetPredictedReplicas
 
-systemConfiguration = SystemConfiguration()  # TODO: ¿Por qué esta global?
+systemConfiguration = SystemConfiguration()  # FIX: ¿Por qué esta global?
 
 
 # planner/derivation/policies_derivation.go:217
@@ -276,3 +276,12 @@ def maxPodsCapacityInVM(vmProfile: VmProfile, resourceLimit: Limit_) -> int:
 def MillisecondsToSeconds(m: float) -> float:
     return m/1000
 
+def memBytesToGB(value: int) -> float:
+    memFloat = float(value) / 1000000000
+    return memFloat
+
+def stringToCPUCores(value: str) -> float:
+    try:
+        return float(value.replace("m", ""))/1000
+    except:
+        return 0.0

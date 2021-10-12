@@ -65,9 +65,9 @@ def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfigurati
 
 
     # Store forecast in Mongo (mocked in global var)
-    updateForecastInDB(forecast, sysConfiguration)  # TODO: does not subscribe
+    updateForecastInDB(forecast, sysConfiguration)  # LATER: does not subscribe
 
-    # TODO: retrieve existing policies. Currently no policies are stored
+    # LATER: retrieve existing policies. Currently no policies are stored
     """
     policyDAO = GetPolicyDAO(mainService)
     storedPolicy, err = policyDAO.FindSelectedByTimeWindow(timeStart, timeEnd)
@@ -115,7 +115,7 @@ def setNewPolicy(forecast: Forecast, sysConfiguration: SystemConfiguration, vmPr
         print(f"Error evaluation policies: {err.error}")
     else:
         # log.Info("Finish policies evaluation")
-        # TODO: store policies in mongo
+        # LATER: store policies in mongo
         """
         policyDAO = storage.GetPolicyDAO(sysConfiguration.MainServiceName)
         for _,p := range policies {

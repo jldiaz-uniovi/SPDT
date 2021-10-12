@@ -1,11 +1,13 @@
-from datetime import datetime
 import math
+from datetime import datetime
 
-from .model import (Const, Limit_, Policy, PolicyMetrics, ProcessedForecast,
-                    ScalingAction, ServiceInfo, Service, State, VMScale)
-from .policy import AbstractPolicy
+from bson.objectid import ObjectId  # type: ignore
+
 from .aux_func import (adjustGranularity, estimatePodsConfiguration,
-                    setScalingSteps, maxPodsCapacityInVM)
+                       maxPodsCapacityInVM, setScalingSteps)
+from .model import (Const, Limit_, Policy, PolicyMetrics, ProcessedForecast,
+                    ScalingAction, Service, ServiceInfo, State, VMScale)
+from .policy import AbstractPolicy
 
 
 class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
@@ -70,7 +72,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         numConfigurations = len(scalingActions)
         newPolicy.ScalingActions = scalingActions
         newPolicy.Algorithm = self.algorithm
-        # newPolicy.ID = bson.NewObjectId()  # TODO: use pymongo.objectid
+        newPolicy.ID = ObjectId()
         newPolicy.Status = Const.DISCARTED.value  # State by default
         newPolicy.Parameters = parameters
         newPolicy.Metrics.NumberScalingActions = numConfigurations
