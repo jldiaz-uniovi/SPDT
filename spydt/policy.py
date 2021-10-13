@@ -29,24 +29,21 @@ class AbstractPolicy(ABC): # planner/derivation/policies_derivation.go:25
 # planner/derivation/policies_derivation.go:40
 def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfiguration, forecast: Forecast) -> Tuple[list[Policy], Error]:
     policies: list[Policy] = []
-    systemConfiguration = sysConfiguration
     mapVMProfiles = { p.Type: p for p in sortedVMProfiles }
 
     log.info("Request current state" )
     currentState, err = RetrieveCurrentState(sysConfiguration.SchedulerComponent.Endpoint + Const.ENDPOINT_CURRENT_STATE.value)
-    log.warning("Policies is still NOT IMPLEMENTED. Returning empty policy list and 'not-implemented' error")
-    return policies, Error("Policies() not implemented")
 
+    if err.error:
+        log.error(f"Error to get current state {err.error}")
+    else:
+        log.info("Finish request for current state" )
+    
+    log.debug(f"Current state -> {currentState}")
     # TODO
+    if currentState.Services[sysConfiguration.MainServiceName].Scale == 0:
+        return policies, Error(f"Service {sysConfiguration.MainServiceName } is not deployed")
     """
-    if err != nil {
-        log.Error("Error to get current state %s", err.Error() )
-    } else {
-        log.Info("Finish request for current state" )
-    }
-    if currentState.Services[systemConfiguration.MainServiceName].Scale == 0 {
-        return policies, errors.New("Service "+ systemConfiguration.MainServiceName +" is not deployed")
-    }
     if available, vmType := validateVMProfilesAvailable(currentState.VMs, mapVMProfiles); !available{
         return policies, errors.New("Information not available for VM Type "+vmType )
     }
@@ -110,10 +107,11 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
         policies = append(policies, policies6...)
     }
     """
+    log.warning("Policies() NOT IMPLEMENTED. Returning empty policy list")
     return policies, err
 
 
 def SelectPolicy(policies, sysConfiguration, vmProfiles, forecast) -> Tuple[Policy, Error]:
-    log.warning("still NOT IMPLEMENTED, returning emtpy Policy")
-    return Policy(), Error("not implemented")
+    log.warning("SelectPolicy() still NOT IMPLEMENTED, returning emtpy Policy")
+    return Policy(), Error() # Error("SelectPolicy() not implemented")
   

@@ -93,5 +93,5 @@ def GetPredictedReplicas(endpoint: str, appName: str, appType: str, mainServiceN
               msc: float, cpuCores: float, memGb: float) -> Tuple[MSCCompleteSetting, Error]:
 
     # TODO: this is related to database connections
-    return MSCCompleteSetting(), Error("Not implemented")
+    return MSCCompleteSetting(), Error("GetPredictedReplicas() not implemented")
 
