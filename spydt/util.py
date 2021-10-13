@@ -13,7 +13,7 @@ def ReadConfigFile(configFile: str) -> Tuple[SystemConfiguration, Error]:
         with open(configFile) as f:
             y_data = yaml.load(f, Loader=yaml.BaseLoader)
         j = json.dumps(y_data)
-        sysconf = SystemConfiguration.from_json(j) # type: ignore
+        sysconf = SystemConfiguration.schema().loads(j) # type: ignore
         return sysconf, Error("")
     except Exception as e:
         log.error(f"There was a problem reading the configuration file: {e}")

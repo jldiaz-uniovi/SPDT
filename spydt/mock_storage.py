@@ -58,9 +58,10 @@ def fetchForecast(sysConfiguration: SystemConfiguration, timeStart: datetime, ti
     # Currently an example JSON is used as data source
     try:
         with open("tests_mock_input/mock_forecast_test.json") as f:
-            forecast = Forecast.from_json(f.read()) # type:ignore
+            forecast = Forecast.schema().loads(f.read()) # type:ignore
     except Exception as e:
         return Forecast(), Error(f"Unable to read JSON forecast: {e}")
+    # log.debug(f"Forecast -> {forecast}")
     return forecast, Error()
 
 
@@ -140,7 +141,9 @@ def updateForecastInDB(forecast: Forecast, sysConfiguration: SystemConfiguration
 
 def RetrieveCurrentState(endpoint: str ) -> Tuple[State, Error]:
     policyState = State()
-    stateScheduled, _ = InfraCurrentState(endpoint)
+    stateScheduled, e = InfraCurrentState(endpoint)
+    if e.error:
+        log.error(f"InfraCurrentState() returned error '{e.error}'")
     mapServicesScheduled = stateScheduled.Services
     policyServices: Service = Service({})
 
@@ -173,7 +176,9 @@ def InfraCurrentState(endpoint: str) -> Tuple[StateToSchedule, Error]:
             data = f.read()
             infrastructureState = InfrastructureState.schema().loads(data)  # type: ignore
     except Exception as e:
+        # raise
         return currentState, Error(f"{e}")
 
+    log.debug(f"Infrastructure current state={infrastructureState}")
     currentState = infrastructureState.ActiveState
     return currentState, Error()

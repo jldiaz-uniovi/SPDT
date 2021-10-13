@@ -4,6 +4,8 @@ from enum import Enum
 from typing import List, NewType
 from bson.objectid import ObjectId  # type: ignore
 from dataclasses_json import dataclass_json, config, Undefined
+from dateutil.parser import isoparse
+from marshmallow import fields
 
 def _f(fn=None, dv=None, df=None):
     if df:
@@ -12,14 +14,23 @@ def _f(fn=None, dv=None, df=None):
         return field(metadata=config(field_name=fn), default=dv)
 
 def parse_date(isodate: str) -> datetime:
+    return isoparse(isodate)
+
+def parse_date2(isodate: str) -> datetime:
     return datetime.fromisoformat(isodate.replace("Z", "+00:00"))
 
 def date_to_iso(date: datetime) -> str:
     return datetime.isoformat(date) + "Z"
 
-def _timestamp(fn=None):
-    return field(metadata=config(field_name=fn, encoder=date_to_iso, decoder=parse_date),
-        default_factory=datetime.now)
+def _isodate(fn=None):
+    return field(metadata=config(
+                    field_name=fn, 
+                    encoder=date_to_iso, 
+                    decoder=parse_date,  
+                    mm_field=fields.DateTime(format="iso", data_key=fn)),
+                default_factory=datetime.now
+                )
+
 
 @dataclass
 class Error:
@@ -126,8 +137,8 @@ class Component:
 @dataclass_json
 @dataclass
 class ScalingHorizon_:
-    StartTime: datetime	= _timestamp("start-time")
-    EndTime: datetime = _timestamp("end-time")
+    StartTime: datetime	= _isodate("start-time")
+    EndTime: datetime = _isodate("end-time")
 
 @dataclass_json
 @dataclass
@@ -165,7 +176,7 @@ class SystemConfiguration:  # util/config.go:42
 @dataclass
 class StateLoadCapacity: # types/type_policies.go:111
     " Represent the number of requests for a time T"
-    TimeStamp: datetime = _timestamp("timestamp")
+    TimeStamp: datetime = _isodate("timestamp")
     Requests: float = _f("requests", 0.0)
 
 @dataclass_json
@@ -180,10 +191,10 @@ class State: # types/type_policies.go:98
 @dataclass
 class CriticalInterval: # types/types_forecasting.go:9
     """Critical Interval is the interval of time analyzed to take a scaling decision"""
-    TimeStart: datetime = _timestamp("TimeStart")
+    TimeStart: datetime = _isodate("TimeStart")
     Requests: float= _f("Requests", 0.0)  # //max/min point in the interval
-    TimeEnd: datetime = _timestamp("TimeEnd")
-    TimePeak: datetime = _timestamp(None)
+    TimeEnd: datetime = _isodate("TimeEnd")
+    TimePeak: datetime = _isodate(None)
 
 @dataclass_json
 @dataclass
@@ -223,8 +234,8 @@ class PolicyMetrics: # types/types_policies.go:156
     OverProvision: float = _f("over_provision", 0.0)
     UnderProvision: float = _f("under_provision", 0.0)
     NumberScalingActions: int = _f("n_scaling_actions", 0)
-    StartTimeDerivation: datetime = _timestamp("start_derivation_time")
-    FinishTimeDerivation: datetime = _timestamp("finish_derivation_time")
+    StartTimeDerivation: datetime = _isodate("start_derivation_time")
+    FinishTimeDerivation: datetime = _isodate("finish_derivation_time")
     DerivationDuration: float = _f("derivation_duration", 0.0)
     NumberVMScalingActions: int = _f("num_scale_vms", 0)
     NumberContainerScalingActions: int = _f("num_scale_containers", 0)
@@ -250,7 +261,7 @@ class ConfigMetrics: # types/types_policies.go:144
 @dataclass_json
 @dataclass
 class ScalingAction: # types/types_policies.go
-    TimeStartTransition: datetime = _timestamp("time_start_transition")
+    TimeStartTransition: datetime = _isodate("time_start_transition")
     InitialState: State = _f("initial_state", df=State)
     DesiredState: State = _f("desired_state", df=State)
     TimeStart: datetime = _f("time_start")
@@ -267,8 +278,8 @@ class Policy: # types/types_policies.go:201
     Status: str = _f("status", "")
     Parameters: dict[str,str] = _f("parameters", df=dict)
     ScalingActions: list[ScalingAction] = _f("scaling_actions", df=list)
-    TimeWindowStart: datetime = _timestamp("window_time_start")
-    TimeWindowEnd:   datetime = _timestamp("window_time_end")
+    TimeWindowStart: datetime = _isodate("window_time_start")
+    TimeWindowEnd:   datetime = _isodate("window_time_end")
 
 
 @dataclass_json
@@ -300,7 +311,7 @@ class MSCCompleteSetting: # types/types_performance_profiles.go:77
 @dataclass
 class ForecastedValue:
     """/*Represent the number of requests for a time T*/"""
-    TimeStamp: datetime = _timestamp("timestamp")
+    TimeStamp: datetime = _isodate("timestamp")
     Requests: float = _f("requests", 0.0)
 
 
@@ -309,11 +320,11 @@ class ForecastedValue:
 @dataclass
 class Forecast:
     """/*Set of values received from the Forecasting component*/"""
-    IDdb: ObjectId = _f("_id", df=ObjectId)
+    IDdb: str = _f("id", df=lambda: str(ObjectId()))
     ServiceName: str = _f("service_name", "")
     ForecastedValues: list[ForecastedValue] = _f("values", df=list)
-    TimeWindowStart: datetime = _timestamp("start_time")
-    TimeWindowEnd: datetime = _timestamp("end_time")
+    TimeWindowStart: datetime = _isodate("start_time")
+    TimeWindowEnd: datetime = _isodate("end_time")
     IDPrediction: str = _f("id_predictions", "")
 
 
@@ -362,14 +373,15 @@ class ServiceToSchedule:
 ServicesSchedule = NewType("ServicesSchedule", dict[str, ServiceToSchedule])
 
 
-@dataclass_json
+@dataclass_json#(undefined=Undefined.EXCLUDE)
 @dataclass
 class StateToSchedule:
-    LaunchTime: datetime = _timestamp("ISODate")
+    LaunchTime: datetime = _isodate("ISODate")
     Services: ServicesSchedule = _f("Services", df=lambda: ServicesSchedule({}))
     Name: str = _f("Name", "")
     VMs: VMScale = _f("VMs", df=lambda: VMScale({}))
-    ExpectedStart: datetime = _timestamp("ExpectedTime")
+    ExpectedStart: datetime = _isodate("ExpectedTime")
+    RealTime:  datetime = _isodate("RealTime")
 
 @dataclass_json
 @dataclass
