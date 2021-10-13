@@ -1,5 +1,6 @@
 import math
 from datetime import datetime
+import logging
 
 from bson.objectid import ObjectId  # type: ignore
 
@@ -9,6 +10,7 @@ from .model import (Const, Limit_, Policy, PolicyMetrics, ProcessedForecast,
                     ScalingAction, Service, ServiceInfo, State, VMScale)
 from .policy import AbstractPolicy
 
+log = logging.getLogger("spydt")
 
 class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
     """/*
@@ -24,7 +26,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
                 vmType = k
                 memGB =  self.mapVMProfiles[k].Memory
         if len(self.currentState.VMs) > 1:
-            print("Current config has more than one VM type, type %s was selected to continue", vmType)  # FIX: use logging
+            log.warning("Current config has more than one VM type, type %s was selected to continue", vmType)
         return vmType
     
     def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:

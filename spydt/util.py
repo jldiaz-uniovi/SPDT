@@ -1,8 +1,11 @@
 from datetime import datetime
+import logging
 from .model import Component, ForecastComponent_, ScalingHorizon_, SystemConfiguration, Error
 import yaml
 import json
 from typing import Tuple
+
+log = logging.getLogger("spydt")
 
 def ReadConfigFile(configFile: str) -> Tuple[SystemConfiguration, Error]:
     """//Method that parses the configuration file into a struct type"""
@@ -13,5 +16,5 @@ def ReadConfigFile(configFile: str) -> Tuple[SystemConfiguration, Error]:
         sysconf = SystemConfiguration.from_json(j) # type: ignore
         return sysconf, Error("")
     except Exception as e:
-        print(f"There was a problem reading the configuration file: {e}")
+        log.error(f"There was a problem reading the configuration file: {e}")
         return SystemConfiguration(), Error(f"{e}")

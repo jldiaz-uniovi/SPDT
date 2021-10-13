@@ -1,6 +1,7 @@
 # Contains the "commands" that start the policy derivation
 from datetime import datetime
 from typing import Tuple
+import logging
 
 from spydt.policy import Policies, SelectPolicy
 
@@ -14,23 +15,30 @@ from .mock_storage import (
     updateForecastInDB
 )
 
+
+log = logging.getLogger("spydt")
+FORMAT = "%(asctime)s.%(msecs)03d %(funcName)20s ▶ %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S')
+log.setLevel(logging.DEBUG)
+
+
 # cmd/cmd_derive_policy.go:23
 # Heavily adapted: most command-line options are hardcoded
 def derive ():
     configFile = "config.yml"
     sysConfiguration, err  = ReadConfigFile(configFile)
     if err.error:
-        print(f"ERROR:{err.error}")
+        log.error(f"ERROR:{err.error}")
     else:
-        print(f"Configuracion leida con éxito: {sysConfiguration}")
+        log.info(f"Configuracion leida con éxito: {sysConfiguration}")
     
     timeStart = sysConfiguration.ScalingHorizon.StartTime
     timeEnd = sysConfiguration.ScalingHorizon.EndTime
 
     p, err = StartPolicyDerivation(timeStart,timeEnd,sysConfiguration)
     if err.error:
-        print(f"An error has occurred and policies have been not derived. Please try again. Details: {err}")
-    print(f"\nSUCESS: Policy={p}")
+        log.error(f"An error has occurred and policies have been not derived. Please try again. Details: {err}")
+    log.info(f"\nSUCESS: Policy={p}")
     
 # server/pullForecast.go:16
 def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfiguration: SystemConfiguration) -> Tuple[Policy, Error]:
@@ -101,36 +109,32 @@ def setNewPolicy(forecast: Forecast, sysConfiguration: SystemConfiguration, vmPr
 
 
     # //Derive Strategies
-    # log.Info("Start policies derivation")
+    log.info("Start policies derivation")
     policies,err = Policies(vmProfiles, sysConfiguration, forecast)
     if err.error:
         return selectedPolicy, err
     
-    # log.Info("Finish policies derivation")
-    # log.Info("Start policies evaluation")
-    # var err error
-    '''
+    log.info("Finish policies derivation")
+    log.info("Start policies evaluation")
     selectedPolicy, err = SelectPolicy(policies, sysConfiguration, vmProfiles, forecast)
     if err.error:
-        print(f"Error evaluation policies: {err.error}")
+        log.error(f"Error evaluation policies: {err.error}")
     else:
-        # log.Info("Finish policies evaluation")
+        log.info("Finish policies evaluation")
         # LATER: store policies in mongo
         """
         policyDAO = storage.GetPolicyDAO(sysConfiguration.MainServiceName)
         for _,p := range policies {
             err = policyDAO.Insert(p)
             if err != nil {
-                log.Error("The policy with ID = %s could not be stored. Error %s\n", p.ID, err)
+                log.error(f"The policy with ID = {p.ID} could not be stored. Error {err.error}")
             }
         }
         """
-    '''
     return  selectedPolicy, err
-
 
 
 if __name__ == "__main__":
     p, e = StartPolicyDerivation(datetime.now(), datetime.now(), SystemConfiguration())
-    print(e)
-    print(p)
+    log.info(e)
+    log.info(p)

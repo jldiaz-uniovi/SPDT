@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import math
+import logging
 from datetime import datetime, timedelta
 from typing import Tuple
 from .model import (
@@ -8,6 +9,9 @@ from .model import (
 )
 
 from .storage import GetPerformanceProfileDAO, GetPredictedReplicas
+
+
+log = logging.getLogger("spydt")
 
 systemConfiguration = SystemConfiguration()  # FIX: ¿Por qué esta global?
 
@@ -60,7 +64,7 @@ def estimatePodsConfiguration(requests:float, limits:Limit_) -> Tuple[Containers
                 profile.MSCSettings.append(newMSCSetting)
                 err3 = serviceProfileDAO.UpdateById(profile.ID, profile)
             else:
-                print("Performance profile not updated")  # FIX: Logging
+                log.error("Performance profile not updated")
         else:
             return containerConfig, err
     return containerConfig, err

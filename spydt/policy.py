@@ -1,11 +1,15 @@
 from dataclasses import dataclass, field
 from abc import ABC
 from typing import Tuple
+import logging
 
 from spydt.mock_storage import RetrieveCurrentState
 from .model import (
     Const, Error, Forecast, State, VmProfile, SystemConfiguration, ProcessedForecast, Policy, Limit_, VMScale
 )
+
+log = logging.getLogger("spydt")
+
 
 @dataclass
 class AbstractPolicy(ABC): # planner/derivation/policies_derivation.go:25
@@ -28,9 +32,12 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
     systemConfiguration = sysConfiguration
     mapVMProfiles = { p.Type: p for p in sortedVMProfiles }
 
-    # log.Info("Request current state" )
+    log.info("Request current state" )
     currentState, err = RetrieveCurrentState(sysConfiguration.SchedulerComponent.Endpoint + Const.ENDPOINT_CURRENT_STATE.value)
+    log.warning("Policies is still NOT IMPLEMENTED. Returning empty policy list and 'not-implemented' error")
+    return policies, Error("Policies() not implemented")
 
+    # TODO
     """
     if err != nil {
         log.Error("Error to get current state %s", err.Error() )
@@ -106,5 +113,7 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
     return policies, err
 
 
-def SelectPolicy(policies, sysConfiguration, vmProfiles, forecast):
-    ...    
+def SelectPolicy(policies, sysConfiguration, vmProfiles, forecast) -> Tuple[Policy, Error]:
+    log.warning("still NOT IMPLEMENTED, returning emtpy Policy")
+    return Policy(), Error("not implemented")
+  

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Tuple
-
+import logging
 from bson.objectid import ObjectId  # type: ignore
 
 from spydt.aux_func import (MillisecondsToSeconds, memBytesToGB,
@@ -11,6 +11,9 @@ from .model import (Error, Forecast, InfrastructureState,
                     PerformanceProfile, Service, ServiceInfo,
                     ServicePerformanceProfile, State, StateToSchedule,
                     SystemConfiguration, VmProfile)
+
+
+log = logging.getLogger("spydt")
 
 storedPerformanceProfiles: list[PerformanceProfile] = []
 
@@ -28,7 +31,7 @@ def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
         servicePerformanceProfile: ServicePerformanceProfile = ServicePerformanceProfile.schema().loads(data) # type: ignore
 
     except Exception as e:
-        print(f"Error in request Performance Profiles: {e}")
+        log.error(f"Error in request Performance Profiles: {e}")
         return Error(f"{e}")
 
     for p in servicePerformanceProfile.Profiles:
@@ -70,7 +73,7 @@ def ReadVMProfiles()   -> Tuple[list[VmProfile], Error]:
             data = f.read()
         vmProfiles = VmProfile.schema().loads(data, many=True)  # type: ignore
     except Exception as e:
-        # print(e) # LATER: Log
+        log.error(e)
         err.error = f"{e}"
     vmProfiles.sort(key=lambda x: x._Pricing.Price)
     return vmProfiles, err
@@ -97,7 +100,7 @@ def FetchVMBootingProfiles(sysConfiguration: SystemConfiguration, vmProfiles: li
             storedVmBootingProfiles.append(vmBootingProfile)
         except Exception as e:
             err.error = f"{e}"
-            print(f"Error in request VM Booting Profile for type {vm.Type}: {e}")  # LATER: log
+            log.error(f"Error in request VM Booting Profile for type {vm.Type}: {e}")
     return err
 
 
