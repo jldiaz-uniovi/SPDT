@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from .model import (CriticalInterval, Limit_, Policy, ProcessedForecast,
                     VmProfile, VMScale)
-from .policy import AbstractPolicy
+from .abstract_classes import AbstractPolicy
 
 
 class BestResourcePairPolicy(AbstractPolicy):

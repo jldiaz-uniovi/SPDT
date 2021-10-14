@@ -8,7 +8,7 @@ from .aux_func import (adjustGranularity, estimatePodsConfiguration,
                        maxPodsCapacityInVM, setScalingSteps)
 from .model import (Const, Limit_, Policy, PolicyMetrics, ProcessedForecast,
                     ScalingAction, Service, ServiceInfo, State, VMScale)
-from .policy import AbstractPolicy
+from .abstract_classes import AbstractPolicy
 
 log = logging.getLogger("spydt")
 
@@ -41,7 +41,10 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         for it in processedForecast.CriticalIntervals:
             resourceLimits = Limit_()
             # Select the performance profile that fits better
-            containerConfigOver, _ = estimatePodsConfiguration(it.Requests, currentPodLimits)
+            containerConfigOver, err = estimatePodsConfiguration(it.Requests, currentPodLimits)
+            if err.error:
+                raise Exception(f"{err.error}") # Had to raise an exception because this function
+                                              # is not prepared to return any error
             newNumPods = containerConfigOver.MSCSetting.Replicas
             vmSet = self.FindSuitableVMs(newNumPods, containerConfigOver.Limits)
             stateLoadCapacity = containerConfigOver.MSCSetting.MSCPerSecond

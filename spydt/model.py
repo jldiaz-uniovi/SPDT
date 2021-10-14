@@ -217,7 +217,7 @@ class Limit_: # types/types_performance_profiles.go:32
 class ContainersConfig: # types/types_policies.go:224
     Limits: Limit_ = _f("limits", df=Limit_)
     MSCSetting: MSCSimpleSetting = _f("mscs", df=MSCSimpleSetting)
-    VMSet: VMScale = _f("vms", df=VMScale)
+    VMSet: VMScale = _f("vms", df=lambda: VMScale({}))
     Cost: float = _f("cost", 0.0)
 
 

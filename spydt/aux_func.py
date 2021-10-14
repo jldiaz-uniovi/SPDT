@@ -3,8 +3,10 @@ import math
 import logging
 from datetime import datetime, timedelta
 from typing import Tuple
+
+from dataclasses_json.api import C
 from .model import (
-    Limit_, ContainersConfig, Const, ScalingAction, State, Const, VMScale, VmProfile,
+    CriticalInterval, Forecast, ForecastedValue, Limit_, ContainersConfig, Const, ProcessedForecast, ScalingAction, State, Const, VMScale, VmProfile,
     SystemConfiguration, Error, MSCSimpleSetting, ConfigMetrics
 )
 
@@ -45,6 +47,8 @@ def estimatePodsConfiguration(requests:float, limits:Limit_) -> Tuple[Containers
         appType = systemConfiguration.AppType
         mainServiceName = systemConfiguration.MainServiceName
         mscSetting,err = GetPredictedReplicas(url,appName,appType,mainServiceName,requests,limits.CPUCores, limits.MemoryGB)
+        if err.error:
+            return containerConfig, err
 
         newMSCSetting = MSCSimpleSetting()
         if not err.error:
@@ -66,6 +70,7 @@ def estimatePodsConfiguration(requests:float, limits:Limit_) -> Tuple[Containers
             else:
                 log.error("Performance profile not updated")
         else:
+            log.error(f"{err.error}")
             return containerConfig, err
     return containerConfig, err
 
@@ -289,3 +294,53 @@ def stringToCPUCores(value: str) -> float:
         return float(value.replace("m", ""))/1000
     except:
         return 0.0
+
+
+# planner/forecast_processing/forecast-processing.go:9
+def ScalingIntervals(forecast: Forecast, granularity: str) -> ProcessedForecast:
+    factor = 3600.0
+
+    if granularity == Const.MINUTE.value:
+        factor = 60
+    elif granularity == Const.SECOND.value:
+        factor = 1
+
+    intervals:list[CriticalInterval] = []
+    i= 0
+    lenValues = len(forecast.ForecastedValues)
+    value = forecast.ForecastedValues[0]
+    interval = CriticalInterval(
+        Requests= value.Requests / factor,
+        TimeStart=value.TimeStamp,
+        TimeEnd=value.TimeStamp,
+    )
+    intervals.append(interval)
+
+    for i in range(lenValues-1):
+        value = forecast.ForecastedValues[i]
+        startTimestamp = value.TimeStamp
+        highestPeak = value.Requests
+        nextValue: ForecastedValue
+        endTimestamp: datetime
+
+        while True:
+            nextValue = forecast.ForecastedValues[i+1]
+            aux = nextValue.TimeStamp - startTimestamp
+
+            endTimestamp = forecast.ForecastedValues[i+1].TimeStamp
+            if aux.total_seconds() < 300:
+                highestPeak = (highestPeak + forecast.ForecastedValues[i+1].Requests)/2
+            i+=1
+            if aux.total_seconds() >= 300:
+                break
+
+        interval = CriticalInterval(
+            Requests=highestPeak/factor,
+            TimeStart=startTimestamp,
+            TimeEnd=endTimestamp,
+            )
+        intervals.append(interval)
+
+    processedForecast = ProcessedForecast(CriticalIntervals=intervals)
+    return  processedForecast
+

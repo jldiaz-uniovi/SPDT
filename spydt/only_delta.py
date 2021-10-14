@@ -1,5 +1,5 @@
 from .model import Limit_, Policy, ProcessedForecast, VMScale
-from .policy import AbstractPolicy
+from .abstract_classes import AbstractPolicy
 
 
 class OnlyDeltaLoad(AbstractPolicy):

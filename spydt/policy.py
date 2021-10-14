@@ -1,29 +1,17 @@
-from dataclasses import dataclass, field
-from abc import ABC
-from typing import Tuple
 import logging
+from abc import ABC
+from dataclasses import dataclass, field
+from types import MethodWrapperType
+from typing import Tuple
 
-from spydt.mock_storage import RetrieveCurrentState
-from .model import (
-    Const, Error, Forecast, State, VmProfile, SystemConfiguration, ProcessedForecast, Policy, Limit_, VMScale
-)
+from spydt.naive import NaivePolicy
+
+from .aux_func import ScalingIntervals
+from .mock_storage import RetrieveCurrentState
+from .model import (Const, Error, Forecast, Limit_, Policy, ProcessedForecast,
+                    State, SystemConfiguration, VmProfile, VMScale)
 
 log = logging.getLogger("spydt")
-
-
-@dataclass
-class AbstractPolicy(ABC): # planner/derivation/policies_derivation.go:25
-    """//Interface for strategies of how to scale"""
-    algorithm: str = ""
-    currentState: State = field(default_factory=State)
-    mapVMProfiles: dict[str, VmProfile] = field(default_factory=dict)
-    sysConfiguration: SystemConfiguration = SystemConfiguration()    
-
-    def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:
-        ...
-
-    def FindSuitableVMs(self, numberPods: int, limits: Limit_) -> VMScale:
-        ...
 
 
 # planner/derivation/policies_derivation.go:40
@@ -43,16 +31,30 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
     # TODO
     if currentState.Services[sysConfiguration.MainServiceName].Scale == 0:
         return policies, Error(f"Service {sysConfiguration.MainServiceName } is not deployed")
-    """
-    if available, vmType := validateVMProfilesAvailable(currentState.VMs, mapVMProfiles); !available{
-        return policies, errors.New("Information not available for VM Type "+vmType )
-    }
 
-    granularity := systemConfiguration.ForecastComponent.Granularity
-    processedForecast := forecast_processing.ScalingIntervals(forecast, granularity)
+    
+    available, vmType = validateVMProfilesAvailable(currentState.VMs, mapVMProfiles)
+    if not available:
+        return policies, Error(f"Information not available for VM Type {vmType}")
+    
+    granularity = sysConfiguration.ForecastComponent.Granularity
+    processedForecast = ScalingIntervals(forecast, granularity)
     initialState = currentState
 
 
+    if sysConfiguration.PreferredAlgorithm == Const.NAIVE_ALGORITHM.value:
+        naive = NaivePolicy(
+            algorithm=Const.NAIVE_ALGORITHM.value,
+            currentState=currentState, 
+            mapVMProfiles=mapVMProfiles, 
+            sysConfiguration=sysConfiguration
+        )
+        policies = naive.CreatePolicies(processedForecast=processedForecast)
+    else:
+        log.warning(f"Policies(). {sysConfiguration.PreferredAlgorithm} NOT IMPLEMENTED. Only naive strategy is implemented")
+        return policies, Error(f"{sysConfiguration.PreferredAlgorithm} policy is not implemented")
+ 
+    """
     switch sysConfiguration.PreferredAlgorithm {
     case util.NAIVE_ALGORITHM:
         naive := NaivePolicy {algorithm:util.NAIVE_ALGORITHM,
@@ -107,7 +109,6 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
         policies = append(policies, policies6...)
     }
     """
-    log.warning("Policies() NOT IMPLEMENTED. Returning empty policy list")
     return policies, err
 
 
@@ -115,3 +116,10 @@ def SelectPolicy(policies, sysConfiguration, vmProfiles, forecast) -> Tuple[Poli
     log.warning("SelectPolicy() still NOT IMPLEMENTED, returning emtpy Policy")
     return Policy(), Error() # Error("SelectPolicy() not implemented")
   
+
+# planner/derivation/policies_derivation.go:545
+def validateVMProfilesAvailable(vmSet: VMScale, mapVMProfiles: dict[str, VmProfile] ) -> Tuple[bool, str]:
+    for k in vmSet:
+        if k not in mapVMProfiles:
+            return False, k
+    return True, ""
