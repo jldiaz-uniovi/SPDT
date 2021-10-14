@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import copy
 from .model import (
     PerformanceProfile, Error, Limit_, MSCCompleteSetting
 )
@@ -18,7 +19,9 @@ class PerformanceProfileDAO:
         result = [x for x in self.store if filter(x)]
         if not result:
             return PerformanceProfile(), Error(f"not found any PerformanceProfile for cores={cores}, memory={memory}, replicas={replicas}")
-        return result[0], Error()
+        result = copy.deepcopy(result[0])
+        result.MSCSettings = [m for m in result.MSCSettings if m.Replicas == replicas]
+        return result, Error()
         """	
         var performanceProfile types.PerformanceProfile
         err := p.db.C(p.Collection).Find(bson.M{
@@ -57,8 +60,8 @@ class PerformanceProfileDAO:
         return Error()  # No error
         """	
         err := p.db.C(p.Collection).
-		Update(bson.M{"_id":id},performanceProfile)
-	    return err
+        Update(bson.M{"_id":id},performanceProfile)
+        return err
         """
 
 
@@ -89,9 +92,40 @@ def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
     return PerformanceProfileDB
     """
 
+
+# rest_clients/performance_profiles/client.go:59
 def GetPredictedReplicas(endpoint: str, appName: str, appType: str, mainServiceName: str,
               msc: float, cpuCores: float, memGb: float) -> Tuple[MSCCompleteSetting, Error]:
 
     # TODO: this is related to database connections
     return MSCCompleteSetting(), Error("GetPredictedReplicas() not implemented")
+    
+    """
+    mscSetting = MSCCompleteSetting()
+    parameters = {}
+    parameters["apptype"] = appType
+    parameters["appname"] = appName
+    parameters["mainservicename"] = mainServiceName
+    parameters["msc"] = strconv.FormatFloat(msc, 'f', 1, 64)
+    parameters["numcoresutil"] = strconv.FormatFloat(cpuCores, 'f', 1, 64)
+    parameters["numcoreslimit"] = strconv.FormatFloat(cpuCores, 'f', 1, 64)
+    parameters["nummemlimit"] = strconv.FormatFloat(memGb, 'f', 1, 64)
+
+    # endpoint = util.ParseURL(endpoint, parameters)
+
+    response, err := http.Get(endpoint)
+    if err != nil {
+        return mscSetting,err
+    }
+    defer response.Body.Close()
+    data, err := ioutil.ReadAll(response.Body)
+    if err != nil {
+        return mscSetting,err
+    }
+    err = json.Unmarshal(data, &mscSetting)
+    if err != nil {
+        return mscSetting,err
+    }
+    return mscSetting,err
+    """    
 
