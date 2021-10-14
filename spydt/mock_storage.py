@@ -45,7 +45,7 @@ def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
             )
             mscSettings.append(setting)
         performanceProfile = PerformanceProfile(
-            ID=ObjectId(),
+            ID=str(ObjectId()),
             Limit=p.Limits,
             MSCSettings=mscSettings
         )
@@ -123,7 +123,7 @@ def updateForecastInDB(forecast: Forecast, sysConfiguration: SystemConfiguration
     
     if not storedForecast:
         # If it is not already stored
-        forecast.IDdb = ObjectId()
+        forecast.IDdb = str(ObjectId())
         storedForecast.append(forecast)
     else:
         # LATER

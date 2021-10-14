@@ -4,6 +4,8 @@
 *.dll
 *.so
 *.dylib
+spdt
+SPDT
 
 # Test binary, build with `go test -c`
 *.test
@@ -15,8 +17,13 @@
 *.idea
 .vscode
 
-#Packages installed
+# Packages installed
 /vendor
 
-# Python temporal files
+# Python temporary files
 __pycache__
+
+# My own tests
+pruebas/
+Logs.log
+*.mongodb

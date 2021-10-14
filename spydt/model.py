@@ -272,7 +272,7 @@ class ScalingAction: # types/types_policies.go
 @dataclass_json
 @dataclass
 class Policy: # types/types_policies.go:201
-    ID: ObjectId = _f("id", df=ObjectId)
+    ID: str = _f("id", df=lambda: str(ObjectId))
     Algorithm: str = _f("algorithm", "")
     Metrics: PolicyMetrics = _f("metrics", df=PolicyMetrics)
     Status: str = _f("status", "")
@@ -285,7 +285,7 @@ class Policy: # types/types_policies.go:201
 @dataclass_json
 @dataclass
 class PerformanceProfile:
-    ID: ObjectId = _f("_id", df=ObjectId)
+    ID: str = _f("_id", df=lambda: str(ObjectId()))
     MSCSettings: list[MSCSimpleSetting] = _f("mscs", df=list)
     Limit: Limit_ = _f("limits", df=Limit_)
 

@@ -50,6 +50,8 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
             sysConfiguration=sysConfiguration
         )
         policies = naive.CreatePolicies(processedForecast=processedForecast)
+        log.info(f"{len(policies)} policies generated")
+        # print(policies[0].to_json())
     else:
         log.warning(f"Policies(). {sysConfiguration.PreferredAlgorithm} NOT IMPLEMENTED. Only naive strategy is implemented")
         return policies, Error(f"{sysConfiguration.PreferredAlgorithm} policy is not implemented")

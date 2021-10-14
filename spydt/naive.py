@@ -77,7 +77,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         numConfigurations = len(scalingActions)
         newPolicy.ScalingActions = scalingActions
         newPolicy.Algorithm = self.algorithm
-        newPolicy.ID = ObjectId()
+        newPolicy.ID = str(ObjectId())
         newPolicy.Status = Const.DISCARTED.value  # State by default
         newPolicy.Parameters = parameters
         newPolicy.Metrics.NumberScalingActions = numConfigurations
