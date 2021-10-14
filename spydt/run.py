@@ -14,7 +14,7 @@ from .util import ReadConfigFile
 log = logging.getLogger("spydt")
 FORMAT = "%(funcName)20s ▶ %(message)s"
 logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S', handlers=[RichHandler()])
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 # cmd/cmd_derive_policy.go:23
