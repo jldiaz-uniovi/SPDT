@@ -344,3 +344,7 @@ def ScalingIntervals(forecast: Forecast, granularity: str) -> ProcessedForecast:
     processedForecast = ProcessedForecast(CriticalIntervals=intervals)
     return  processedForecast
 
+
+# planner/derivation/miscellaneous.go:136
+def MapKeysToString(keys: dict[str, bool]) -> str:
+    return ",".join(keys)

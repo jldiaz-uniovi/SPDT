@@ -11,7 +11,7 @@ class PerformanceProfileDAO:
 
     # LATER: Use mongodb instead of fake storage
     def FindByLimitsAndReplicas(self, cores: float, memory: float, replicas: int) -> Tuple[PerformanceProfile, Error]:
-        def filter(x:PerformanceProfile):
+        def filter(x:PerformanceProfile) -> bool:
             return (x.Limit.CPUCores == cores and
                 x.Limit.MemoryGB == memory and
                 any(v.Replicas == replicas for v in x.MSCSettings)
@@ -19,9 +19,9 @@ class PerformanceProfileDAO:
         result = [x for x in self.store if filter(x)]
         if not result:
             return PerformanceProfile(), Error(f"not found any PerformanceProfile for cores={cores}, memory={memory}, replicas={replicas}")
-        result = copy.deepcopy(result[0])
-        result.MSCSettings = [m for m in result.MSCSettings if m.Replicas == replicas]
-        return result, Error()
+        result_copy = copy.deepcopy(result[0])
+        result_copy.MSCSettings = [m for m in result_copy.MSCSettings if m.Replicas == replicas]
+        return result_copy, Error()
         """	
         var performanceProfile types.PerformanceProfile
         err := p.db.C(p.Collection).Find(bson.M{
