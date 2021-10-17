@@ -318,7 +318,7 @@ def ScalingIntervals(forecast: Forecast, granularity: str) -> ProcessedForecast:
     )
     intervals.append(interval)
 
-    for i in range(lenValues-1):
+    while i < lenValues-1:
         value = forecast.ForecastedValues[i]
         startTimestamp = value.TimeStamp
         highestPeak = value.Requests
