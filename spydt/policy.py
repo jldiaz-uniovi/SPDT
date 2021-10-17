@@ -29,8 +29,7 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
     else:
         log.info("Finish request for current state" )
     
-    log.debug(f"Current state -> {currentState}")
-    # TODO
+    # log.debug(f"Current state -> {currentState}")
     if currentState.Services[sysConfiguration.MainServiceName].Scale == 0:
         return policies, Error(f"Service {sysConfiguration.MainServiceName } is not deployed")
 

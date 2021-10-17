@@ -155,6 +155,7 @@ def computeVMBootingTime(vmsScale: VMScale, sysConfiguration: SystemConfiguratio
     out:
         @int	Time in seconds that the booting wil take
     """
+    log.warning(f"computeVMBootingTime() NOT IMPLEMENTED, returning booting time = 0 for {vmsScale}")
     bootTime = 0.0
     """
     # Check in db if already data is stored
@@ -193,6 +194,7 @@ def computeVMTerminationTime(vmsScale: VMScale, sysConfiguration: SystemConfigur
     out:
         @int	Time in seconds that the termination wil take
     """
+    log.warning("NOT IMPLEMENTED, returning termination time = 0")
     terminationTime = 0.0
     # Check in db if already data is stored
     """
