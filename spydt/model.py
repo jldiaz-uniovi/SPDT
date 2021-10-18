@@ -6,6 +6,7 @@ from bson.objectid import ObjectId  # type: ignore
 from dataclasses_json import dataclass_json, config, Undefined
 from dateutil.parser import isoparse
 from marshmallow import fields
+import os
 
 def _f(fn=None, dv=None, df=None):
     if df:
@@ -84,8 +85,10 @@ class Const(Enum):
     ENDPOINT_SERVICE_PROFILE_BY_REPLICAS = "/getPredictedRegressionTRN/{apptype}/{appname}/{mainservicename}/{replicas}/{numcoresutil}/{numcoreslimit}/{nummemlimit}"
     ENDPOINT_SUBSCRIBE_NOTIFICATIONS = "/subscribe"
     ENDPOINT_RECIVE_NOTIFICATIONS = "/api/forecast"
-
-
+    DEFAULT_DB_COLLECTION_VM_PROFILES = "VM_Booting_Profile"
+    DEFAULT_DB_SERVER_VM_BOOTING = os.getenv("PROFILESDB_HOST")
+    DEFAULT_DB_PROFILES = "ServiceProfiles"
+    DEFAULT_DB_COLLECTION_PROFILES = "PerformanceProfiles"
 @dataclass_json
 @dataclass
 class Pricing: # types/types_performance_profiles.go:5
@@ -311,13 +314,15 @@ class Policy: # types/types_policies.go:201
 @dataclass_json
 @dataclass
 class PerformanceProfile:
+    # Performance as retrieved from external endpoint (and stored in database)
     ID: str = _f("_id", df=lambda: str(ObjectId()))
-    MSCSettings: list[MSCSimpleSetting] = _f("mscs", df=list)
-    Limit: Limit_ = _f("limits", df=Limit_)
+    MSCSettings: list[MSCSimpleSetting] = _f("mscs", df=list)   # replicas, rps, boot time
+    Limit: Limit_ = _f("limits", df=Limit_)                     # cpus, memory
 
 @dataclass_json
 @dataclass
 class MaxServiceCapacity: # types/types_performance_profiles.go:58
+    # Apparently not used
     Experimental   : float = _f("Experimental", 0.0)
     RegBruteForce  : float = _f("RegBruteForce", 0.0)
     RegSmart       : float = _f("RegSmart", 0.0)
@@ -370,7 +375,7 @@ class BootShutDownTime:
 @dataclass
 class InstancesBootShutdownTime:
     """//Times in seconds"""
-    InstancesValues: list[BootShutDownTime] = _f("InstanceValues", df=BootShutDownTime)
+    InstancesValues: list[BootShutDownTime] = _f("InstanceValues", df=list)
     VMType: str = _f("VMType", "")
 
 @dataclass_json

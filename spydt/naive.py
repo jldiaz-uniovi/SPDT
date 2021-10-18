@@ -4,8 +4,7 @@ import logging
 
 from bson.objectid import ObjectId  # type: ignore
 
-from .aux_func import (adjustGranularity, estimatePodsConfiguration,
-                       maxPodsCapacityInVM, setScalingSteps)
+from . import aux_func
 from .model import (Const, Limit_, Policy, PolicyMetrics, ProcessedForecast,
                     ScalingAction, Service, ServiceInfo, State, VMScale)
 from .abstract_classes import AbstractPolicy
@@ -41,7 +40,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         for it in processedForecast.CriticalIntervals:
             resourceLimits = Limit_()
             # Select the performance profile that fits better
-            containerConfigOver, err = estimatePodsConfiguration(it.Requests, currentPodLimits)
+            containerConfigOver, err = aux_func.estimatePodsConfiguration(it.Requests, currentPodLimits)
             if err.error:
                 raise Exception(f"{err.error}") # Had to raise an exception because this function
                                               # is not prepared to return any error
@@ -66,8 +65,8 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
             timeStart = it.TimeStart
             timeEnd = it.TimeEnd
             systemConfiguration = self.sysConfiguration  # FIX: ¿sale de self? En el original parecía tomarlo de una variable global en el módulo util
-            stateLoadCapacity = adjustGranularity(systemConfiguration.ForecastComponent.Granularity, stateLoadCapacity)
-            setScalingSteps(scalingActions, self.currentState, state, timeStart, timeEnd, totalServicesBootingTime, stateLoadCapacity)
+            stateLoadCapacity = aux_func.adjustGranularity(systemConfiguration.ForecastComponent.Granularity, stateLoadCapacity)
+            aux_func.setScalingSteps(scalingActions, self.currentState, state, timeStart, timeEnd, totalServicesBootingTime, stateLoadCapacity)
             self.currentState = state
         parameters = {}
         parameters[Const.METHOD.value] = Const.SCALE_METHOD_HORIZONTAL.value
@@ -92,7 +91,7 @@ class NaivePolicy(AbstractPolicy): # planner/derivation/algo_naive.go:12
         vmScale = VMScale({})
         vmType = self.currentVMType()
         profile = self.mapVMProfiles[vmType]
-        podsCapacity = maxPodsCapacityInVM(profile, limits)
+        podsCapacity = aux_func.maxPodsCapacityInVM(profile, limits)
         if podsCapacity > 0:
             numVMs = math.ceil(numberPods/podsCapacity)
             vmScale[vmType] = int(numVMs)

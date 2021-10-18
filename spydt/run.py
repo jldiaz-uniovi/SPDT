@@ -5,8 +5,7 @@ from typing import Tuple
 from rich.logging import RichHandler
 
 from .execute import TriggerScheduler
-from .mock_storage import (FetchApplicationProfile, FetchVMBootingProfiles,
-                           ReadVMProfiles, fetchForecast, updateForecastInDB)
+from . import mock_storage
 from .model import Const, Error, Forecast, Policy, SystemConfiguration, VmProfile
 from .policy import Policies, SelectPolicy
 from .util import ReadConfigFile
@@ -14,7 +13,7 @@ from .util import ReadConfigFile
 log = logging.getLogger("spydt")
 FORMAT = "%(funcName)20s ▶ %(message)s"
 logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S', handlers=[RichHandler()])
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 # cmd/cmd_derive_policy.go:23
@@ -44,30 +43,30 @@ def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfigurati
 
     # Populate Performance Profiles from external API (mocked from json)
     # and store it in mongo (also mocked, stored in global var)
-    error = FetchApplicationProfile(sysConfiguration)
+    error = mock_storage.FetchApplicationProfile(sysConfiguration)
     if error.error:
         return Policy(),error
 
     # Request Forecasting from external API (mocked from json)
-    forecast, err = fetchForecast(sysConfiguration, timeStart, timeEnd)
+    forecast, err = mock_storage.fetchForecast(sysConfiguration, timeStart, timeEnd)
     if err.error:
         return Policy(), err
     
     # Get VM Profiles from json file
-    vmProfiles, err = ReadVMProfiles()
+    vmProfiles, err = mock_storage.ReadVMProfiles()
     if err.error:
         return Policy(), err
     
     
     # Populate VM Booting Profiles from external API (mocked from json)
     # and store it in mongo (also mocker, stored in global var)
-    err = FetchVMBootingProfiles(sysConfiguration, vmProfiles)
+    err = mock_storage.FetchVMBootingProfiles(sysConfiguration, vmProfiles)
     if err.error:
         return Policy(), err
 
 
     # Store forecast in Mongo (mocked in global var)
-    updateForecastInDB(forecast, sysConfiguration)  # LATER: does not subscribe
+    mock_storage.updateForecastInDB(forecast, sysConfiguration)  # LATER: does not subscribe
 
     # LATER: retrieve existing policies. Currently no policies are stored
     """

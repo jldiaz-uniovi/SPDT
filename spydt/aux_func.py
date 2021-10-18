@@ -5,12 +5,14 @@ from datetime import datetime, timedelta
 from typing import Tuple
 
 from dataclasses_json.api import C
+
+from . import mock_storage
 from .model import (
     CriticalInterval, Forecast, ForecastedValue, Limit_, ContainersConfig, Const, ProcessedForecast, ScalingAction, State, Const, VMScale, VmProfile,
     SystemConfiguration, Error, MSCSimpleSetting, ConfigMetrics
 )
 
-from .storage import GetPerformanceProfileDAO, GetPredictedReplicas
+from .storage import GetPerformanceProfileDAO, GetPredictedReplicas, GetVMBootingProfileDAO
 
 
 log = logging.getLogger("spydt")
@@ -114,7 +116,7 @@ def DeltaVMSet(current:VMScale, candidate:VMScale) -> Tuple[VMScale,VMScale]:
         else:
             shutdownSet[k] =  current[k]
     for k in candidate:
-        if k in current:
+        if k not in current:
             startSet[k] = candidate[k]
     return startSet, shutdownSet
 
@@ -155,33 +157,28 @@ def computeVMBootingTime(vmsScale: VMScale, sysConfiguration: SystemConfiguratio
     out:
         @int	Time in seconds that the booting wil take
     """
-    log.warning(f"computeVMBootingTime() NOT IMPLEMENTED, returning booting time = 0 for {vmsScale}")
     bootTime = 0.0
-    """
-    # Check in db if already data is stored
-    vmBootingProfileDAO := storage.GetVMBootingProfileDAO()
+    # Check in db if already data is stored (TODO)    
+    vmBootingProfileDAO = GetVMBootingProfileDAO()
 
-    //Call API
-    for vmType, n := range vmsScale {
-        times, err := vmBootingProfileDAO.BootingShutdownTime(vmType, n)
-        if err != nil {
-            url := sysConfiguration.PerformanceProfilesComponent.Endpoint + util.ENDPOINT_VM_TIMES
-            csp := sysConfiguration.CSP
-            region := sysConfiguration.Region
-            times, err = performance_profiles.GetBootShutDownProfileByType(url,vmType, n, csp, region)
-            if err != nil {
-                log.Error("Error in bootingTime query  type %s %d VMS. Details: %s", vmType, n, err.Error())
-                log.Warning("Takes the biggest time available")
-                times.BootTime = util.DEFAULT_VM_BOOT_TIME
-            }else {
-                vmBootingProfile,_ := vmBootingProfileDAO.FindByType(vmType)
-                vmBootingProfile.InstancesValues = append(vmBootingProfile.InstancesValues, times)
-                vmBootingProfileDAO.UpdateByType(vmType, vmBootingProfile)
-            }
-        }
+
+    for vmType, n in vmsScale.items():
+        times, err = vmBootingProfileDAO.BootingShutdownTime(vmType, n)
+        if err.error:
+            url = sysConfiguration.PerformanceProfilesComponent.Endpoint + Const.ENDPOINT_VM_TIMES.value
+            csp = sysConfiguration.CSP
+            region = sysConfiguration.Region
+            times, err = mock_storage.GetBootShutDownProfileByType(url, vmType, n, csp, region)
+            if err.error:
+                log.error(f"Error in bootingTime query  type {vmType} {n} VMS. Details: {err.error}")
+                times.BootTime = Const.DEFAULT_VM_BOOT_TIME.value
+                log.warning(f"Takes the biggest time available {times.BootTime}")
+            else:
+                vmBootingProfile, err = vmBootingProfileDAO.FindByType(vmType)
+                vmBootingProfile.InstancesValues.append(times)
+                vmBootingProfileDAO.UpdateByType(vmType, vmBootingProfile)        
         bootTime += times.BootTime
-    }
-    """
+    log.debug(f"computeVMBootingTime({vmsScale}) returning {bootTime}")
     return bootTime
 
 # planner/derivation/policies_derivation.go:164 TODO: access database or mock it

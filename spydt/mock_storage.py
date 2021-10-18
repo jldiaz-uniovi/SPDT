@@ -3,10 +3,9 @@ from typing import Tuple
 import logging
 from bson.objectid import ObjectId  # type: ignore
 
-from spydt.aux_func import (MillisecondsToSeconds, memBytesToGB,
-                            stringToCPUCores)
+from . import aux_func
 
-from .model import (Error, Forecast, InfrastructureState,
+from .model import (BootShutDownTime, Error, Forecast, InfrastructureState,
                     InstancesBootShutdownTime, MSCSimpleSetting,
                     PerformanceProfile, Service, ServiceInfo,
                     ServicePerformanceProfile, State, StateToSchedule,
@@ -38,10 +37,10 @@ def FetchApplicationProfile(sysConfiguration: SystemConfiguration) -> Error:
         mscSettings: list[MSCSimpleSetting] = []
         for msc in p.MSCs:
             setting = MSCSimpleSetting(
-                BootTimeSec=MillisecondsToSeconds(msc.BootTimeMs),
+                BootTimeSec=aux_func.MillisecondsToSeconds(msc.BootTimeMs),
                 MSCPerSecond=msc.MSCPerSecond.RegBruteForce,
                 Replicas=msc.Replicas,
-                StandDevBootTimeSec=MillisecondsToSeconds(msc.StandDevBootTimeMS)
+                StandDevBootTimeSec=aux_func.MillisecondsToSeconds(msc.StandDevBootTimeMS)
             )
             mscSettings.append(setting)
         performanceProfile = PerformanceProfile(
@@ -148,8 +147,8 @@ def RetrieveCurrentState(endpoint: str ) -> Tuple[State, Error]:
     policyServices: Service = Service({})
 
     for k, v in mapServicesScheduled.items():
-        mem = memBytesToGB(v.Memory)
-        cpu = stringToCPUCores(v.CPU)
+        mem = aux_func.memBytesToGB(v.Memory)
+        cpu = aux_func.stringToCPUCores(v.CPU)
         replicas = v.Scale
         policyServices[k] = ServiceInfo(
             Memory=mem,
@@ -182,3 +181,18 @@ def InfraCurrentState(endpoint: str) -> Tuple[StateToSchedule, Error]:
     log.debug(f"Infrastructure current state={infrastructureState}")
     currentState = infrastructureState.ActiveState
     return currentState, Error()
+
+
+# rest_clients/performance_profiles/client.go:168
+def GetBootShutDownProfileByType(endpoint:  str, vmType: str, numberInstance: int, csp: str, region: str) -> Tuple[BootShutDownTime, Error]:
+    # LATER: access to external endpoint
+    log.warning(f"Mocking external API access for {endpoint}, {vmType}, {numberInstance}, {csp}, {region}")
+    instanceValues = BootShutDownTime()
+    try:
+        with open("tests_mock_input/mock_vms_times.json") as f:
+            data = f.read()
+            instanceValues = BootShutDownTime.schema().loads(data)  # type: ignore
+    except Exception as e:
+        # raise
+        return instanceValues, Error(f"{e}")
+    return instanceValues, Error()

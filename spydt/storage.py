@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 import copy
-from .model import (
-    PerformanceProfile, Error, Limit_, MSCCompleteSetting
-)
-from typing import Tuple
+from dataclasses import dataclass, field
+from typing import Any, Optional, Tuple
+
+from .model import BootShutDownTime, Const, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, PerformanceProfile
+from .run import log
+
 
 @dataclass
 class PerformanceProfileDAO:
@@ -67,8 +68,8 @@ class PerformanceProfileDAO:
 
 def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
     # LATER: this is related to database connections
-    from .mock_storage import storedPerformanceProfiles    
-    return PerformanceProfileDAO(storedPerformanceProfiles)
+    from . import mock_storage
+    return PerformanceProfileDAO(mock_storage.storedPerformanceProfiles)
     """
     if PerformanceProfileDB == nil {
         PerformanceProfileDB = &PerformanceProfileDAO {
@@ -91,7 +92,6 @@ def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
     }
     return PerformanceProfileDB
     """
-
 
 # rest_clients/performance_profiles/client.go:59
 def GetPredictedReplicas(endpoint: str, appName: str, appType: str, mainServiceName: str,
@@ -129,4 +129,47 @@ def GetPredictedReplicas(endpoint: str, appName: str, appType: str, mainServiceN
     }
     return mscSetting,err
     """    
+
+@dataclass
+class VMBootingProfileDAO:
+    Database: str
+    Collection: str
+    store: list[InstancesBootShutdownTime]
+
+    def BootingShutdownTime(self, vmType:str, n:int) -> Tuple[BootShutDownTime, Error]:
+        # LATER: query mongo database
+        for instance in self.store:
+            if instance.VMType == vmType:
+                for bootShutdown in instance.InstancesValues:
+                    if bootShutdown.NumInstances == n:
+                        return bootShutdown, Error() # No error
+        
+        return BootShutDownTime(), Error(f"Not found BootShutDownTime for {vmType} and {n} replicas")
+
+    def FindByType(self, vmType: str) -> Tuple[InstancesBootShutdownTime, Error]:
+        for i in self.store:
+            if i.VMType == vmType:
+                return i, Error()
+        return InstancesBootShutdownTime(), Error("not found")
+
+    def UpdateByType(self, vmType:str, vmBootingProfile: InstancesBootShutdownTime) -> Error:
+        for index, instance in enumerate(self.store):
+            if instance.VMType == vmType:
+                self.store[index] = vmBootingProfile
+                return Error()
+        return Error(f"{vmType} not found")                
+
+VMBootingProfileDB: Optional[VMBootingProfileDAO] = None
+
+def GetVMBootingProfileDAO() -> VMBootingProfileDAO:
+    # LATER: this is related to database connections
+    from . import mock_storage
+    global VMBootingProfileDB
+    if VMBootingProfileDB is None:
+        VMBootingProfileDB = VMBootingProfileDAO(
+            Database = Const.DEFAULT_DB_PROFILES.value,
+            Collection = Const.DEFAULT_DB_COLLECTION_VM_PROFILES.value,
+            store=mock_storage.storedVmBootingProfiles
+        )
+    return VMBootingProfileDB
 

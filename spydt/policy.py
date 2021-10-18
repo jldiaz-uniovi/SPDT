@@ -6,10 +6,10 @@ import math
 from types import MethodWrapperType
 from typing import Tuple
 
-from spydt.naive import NaivePolicy
+from .naive import NaivePolicy
 
-from .aux_func import MapKeysToString, ScalingIntervals
-from .mock_storage import RetrieveCurrentState
+from . import aux_func
+from . import mock_storage
 from .model import (ConfigMetrics, Const, Error, Forecast, ForecastedValue, Limit_, Policy, PolicyMetrics, ProcessedForecast, ScalingAction,
                     State, SystemConfiguration, VmProfile, VMScale)
 
@@ -22,7 +22,7 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
     mapVMProfiles = { p.Type: p for p in sortedVMProfiles }
 
     log.info("Request current state" )
-    currentState, err = RetrieveCurrentState(sysConfiguration.SchedulerComponent.Endpoint + Const.ENDPOINT_CURRENT_STATE.value)
+    currentState, err = mock_storage.RetrieveCurrentState(sysConfiguration.SchedulerComponent.Endpoint + Const.ENDPOINT_CURRENT_STATE.value)
 
     if err.error:
         log.error(f"Error to get current state {err.error}")
@@ -39,7 +39,7 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
         return policies, Error(f"Information not available for VM Type {vmType}")
     
     granularity = sysConfiguration.ForecastComponent.Granularity
-    processedForecast = ScalingIntervals(forecast, granularity)
+    processedForecast = aux_func.ScalingIntervals(forecast, granularity)
     initialState = currentState
 
 
@@ -146,7 +146,7 @@ def SelectPolicy(policies: list[Policy], sysConfiguration: SystemConfiguration, 
         duration =(policy.Metrics.FinishTimeDerivation - policy.Metrics.StartTimeDerivation).total_seconds()
         policyMetrics.DerivationDuration = round(duration, 2)
         policy.Metrics = policyMetrics
-        policy.Parameters[Const.VMTYPES.value] = MapKeysToString(vmTypes)
+        policy.Parameters[Const.VMTYPES.value] = aux_func.MapKeysToString(vmTypes)
         print(policy.to_json())
     """
     //Sort policies based on price
