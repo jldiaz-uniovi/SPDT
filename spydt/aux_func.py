@@ -191,33 +191,28 @@ def computeVMTerminationTime(vmsScale: VMScale, sysConfiguration: SystemConfigur
     out:
         @int	Time in seconds that the termination wil take
     """
-    log.warning("NOT IMPLEMENTED, returning termination time = 0")
     terminationTime = 0.0
-    # Check in db if already data is stored
-    """
-    vmBootingProfileDAO := storage.GetVMBootingProfileDAO()
+        # Check in db if already data is stored (TODO)    
+    vmBootingProfileDAO = GetVMBootingProfileDAO()
 
-    //Call API
-    for vmType, n := range vmsScale {
-        times, err := vmBootingProfileDAO.BootingShutdownTime(vmType, n)
-        if err != nil {
-            url := sysConfiguration.PerformanceProfilesComponent.Endpoint + util.ENDPOINT_VM_TIMES
-            csp := sysConfiguration.CSP
-            region := sysConfiguration.Region
-            times, err = performance_profiles.GetBootShutDownProfileByType(url,vmType, n, csp, region)
-            if err != nil {
-                log.Error("Error in terminationTime query for type %s %d VMS. Details: %s", vmType, n, err.Error())
-                log.Warning("Takes default shutdown")
-                times.ShutDownTime = util.DEFAULT_VM_SHUTDOWN_TIME
-            } else {
-                vmBootingProfile,_ := vmBootingProfileDAO.FindByType(vmType)
-                vmBootingProfile.InstancesValues = append(vmBootingProfile.InstancesValues, times)
-                vmBootingProfileDAO.UpdateByType(vmType, vmBootingProfile)
-            }
-        }
+
+    for vmType, n in vmsScale.items():
+        times, err = vmBootingProfileDAO.BootingShutdownTime(vmType, n)
+        if err.error:
+            url = sysConfiguration.PerformanceProfilesComponent.Endpoint + Const.ENDPOINT_VM_TIMES.value
+            csp = sysConfiguration.CSP
+            region = sysConfiguration.Region
+            times, err = mock_storage.GetBootShutDownProfileByType(url, vmType, n, csp, region)
+            if err.error:
+                log.error(f"Error in terminationTime query for type {vmType} {n} VMS. Details: {err.error}")
+                times.ShutDownTime = Const.DEFAULT_VM_SHUTDOWN_TIME.value
+                log.warning(f"Takes the default shutdown {times.ShutDownTime}")
+            else:
+                vmBootingProfile, err = vmBootingProfileDAO.FindByType(vmType)
+                vmBootingProfile.InstancesValues.append(times)
+                vmBootingProfileDAO.UpdateByType(vmType, vmBootingProfile)        
         terminationTime += times.ShutDownTime
-    }
-    """
+    log.debug(f"computeVMTerminationime({vmsScale}) returning {terminationTime}")
     return terminationTime
 
 # planner/derivation/policies_derivation.go:349
@@ -234,7 +229,7 @@ def setScalingSteps(scalingSteps: list[ScalingAction],
     else:
         # var deltaTime int //time in seconds
         shutdownVMDuration = 0.0
-        startTransitionTime = datetime.now()
+        startTransitionTime = datetime.fromtimestamp(0)
         currentVMSet = VMScale({})
         currentVMSet = currentState.VMs
         vmAdded, vmRemoved = DeltaVMSet(currentVMSet, newState.VMs)

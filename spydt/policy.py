@@ -147,7 +147,7 @@ def SelectPolicy(policies: list[Policy], sysConfiguration: SystemConfiguration, 
         policyMetrics.DerivationDuration = round(duration, 2)
         policy.Metrics = policyMetrics
         policy.Parameters[Const.VMTYPES.value] = aux_func.MapKeysToString(vmTypes)
-        print(policy.to_json())
+        #print(policy.to_json())
     """
     //Sort policies based on price
     sort.Slice(*policies, func(i, j int) bool {
