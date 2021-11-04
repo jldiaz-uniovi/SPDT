@@ -7,7 +7,7 @@ log = logging.getLogger("spytd")
 # planner/execution/trigger_scheduler.go:10
 def TriggerScheduler(policy: Policy, endpoint: str) -> Tuple[list[StateToSchedule], Error]:
     statesToSchedule: list[StateToSchedule] = []
-    log.warning("TriggerScheduler() NOT IMPLEMENTED, returning empty list and error")
+    log.warning("TriggerScheduler() NOT IMPLEMENTED, returning empty list and error")  # TO-DO
     return statesToSchedule, Error("TriggerScheduler() not implemented")
 
     """

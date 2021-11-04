@@ -13,7 +13,7 @@ from .util import ReadConfigFile
 log = logging.getLogger("spydt")
 FORMAT = "%(funcName)20s ▶ %(message)s"
 logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S', handlers=[RichHandler()])
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 
 # cmd/cmd_derive_policy.go:23
@@ -32,7 +32,7 @@ def derive ():
     p, err = StartPolicyDerivation(timeStart,timeEnd,sysConfiguration)
     if err.error:
         log.error(f"An error has occurred and policies have been not derived. Please try again. Details: {err.error}")
-    log.debug(f"SUCESS: Policy={p}")
+    log.debug(f"SUCESS: Policy={p.to_json()}")
     
 # server/pullForecast.go:16
 def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfiguration: SystemConfiguration) -> Tuple[Policy, Error]:
@@ -79,7 +79,7 @@ def StartPolicyDerivation(timeStart: datetime, timeEnd: datetime, sysConfigurati
         selectedPolicy, err = setNewPolicy(forecast, sysConfiguration, vmProfiles)
         ScheduleScaling(sysConfiguration, selectedPolicy)
     else:
-        log.warning("NOT IMPLEMENTED, invalidate old policy")
+        log.warning("invalidate old policy NOT IMPLEMENTED") # TODO
         pass
         """
         shouldUpdate = ValidateMSCThresholds(forecast,storedPolicy, sysConfiguration)
@@ -112,6 +112,7 @@ def setNewPolicy(forecast: Forecast, sysConfiguration: SystemConfiguration, vmPr
     
     log.info("Finish policies derivation")
     log.info("Start policies evaluation")
+    # log.debug(policies)
     selectedPolicy, err = SelectPolicy(policies, sysConfiguration, vmProfiles, forecast)
     if err.error:
         log.error(f"Error evaluation policies: {err.error}")

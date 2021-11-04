@@ -36,6 +36,10 @@ def estimatePodsConfiguration(requests:float, limits:Limit_) -> Tuple[Containers
     serviceProfileDAO = GetPerformanceProfileDAO(systemConfiguration.MainServiceName)
 
     performanceProfileBase,_ = serviceProfileDAO.FindByLimitsAndReplicas(limits.CPUCores, limits.MemoryGB, 1)
+    if not performanceProfileBase.MSCSettings:
+        errmsg = f"No MSCs available for reqouests={requests}, limits={limits}"
+        log.error(errmsg)
+        return containerConfig, Error(errmsg)
     estimatedReplicas = int(math.ceil(requests / performanceProfileBase.MSCSettings[0].MSCPerSecond))
     performanceProfileCandidate,err1 = serviceProfileDAO.FindByLimitsAndReplicas(limits.CPUCores, limits.MemoryGB, estimatedReplicas)
 
@@ -50,7 +54,9 @@ def estimatePodsConfiguration(requests:float, limits:Limit_) -> Tuple[Containers
         mainServiceName = systemConfiguration.MainServiceName
         mscSetting,err = GetPredictedReplicas(url,appName,appType,mainServiceName,requests,limits.CPUCores, limits.MemoryGB)
         if err.error:
-            return containerConfig, err
+            errmsg = f"GetPredictedReplicas() returned empty {mscSetting=}"
+            log.error(errmsg)
+            return containerConfig, Error(errmsg)
 
         newMSCSetting = MSCSimpleSetting()
         if not err.error:
@@ -254,7 +260,7 @@ def setScalingSteps(scalingSteps: list[ScalingAction],
         # // newState.LaunchTime = startTransitionTime
         # 
         """
-        name,_ := structhash.Hash(newState, 1)  # TODO: compute appropriate hash (?) (what is it used for?)
+        name,_ := structhash.Hash(newState, 1)  # TO-DO: compute appropriate hash (?) (what is it used for?)
         newState.Hash = strings.Replace(name, "v1_", "", -1)
         """
         scalingSteps.append(ScalingAction(

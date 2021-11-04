@@ -1,17 +1,19 @@
-from datetime import datetime
 import logging
+import math
 from abc import ABC
 from dataclasses import dataclass, field
-import math
+from datetime import datetime
 from types import MethodWrapperType
 from typing import Tuple
 
+from . import aux_func, mock_storage
+from .always_resize import AlwaysResizePolicy
+from .best_resource_pair import BestResourcePairPolicy
+from .model import (ConfigMetrics, Const, Error, Forecast, ForecastedValue,
+                    Limit_, Policy, PolicyMetrics, ProcessedForecast,
+                    ScalingAction, State, SystemConfiguration, VmProfile,
+                    VMScale)
 from .naive import NaivePolicy
-
-from . import aux_func
-from . import mock_storage
-from .model import (ConfigMetrics, Const, Error, Forecast, ForecastedValue, Limit_, Policy, PolicyMetrics, ProcessedForecast, ScalingAction,
-                    State, SystemConfiguration, VmProfile, VMScale)
 
 log = logging.getLogger("spydt")
 
@@ -53,9 +55,26 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
         policies = naive.CreatePolicies(processedForecast=processedForecast)
         log.info(f"{len(policies)} policies generated")
         # print(policies[0].to_json())
+    elif sysConfiguration.PreferredAlgorithm ==  Const.BEST_RESOURCE_PAIR_ALGORITHM.value:
+        base = BestResourcePairPolicy(
+            algorithm=Const.BEST_RESOURCE_PAIR_ALGORITHM.value,
+            sortedVMProfiles=sortedVMProfiles,
+            currentState=currentState,
+            mapVMProfiles=mapVMProfiles,
+            sysConfiguration=sysConfiguration)
+        policies = base.CreatePolicies(processedForecast)
+    elif sysConfiguration.PreferredAlgorithm == Const.ALWAYS_RESIZE_ALGORITHM.value:
+        alwaysResize = AlwaysResizePolicy(
+            algorithm=Const.ALWAYS_RESIZE_ALGORITHM.value,
+            mapVMProfiles=mapVMProfiles,
+            sortedVMProfiles=sortedVMProfiles, 
+            sysConfiguration=sysConfiguration, 
+            currentState=currentState)
+        policies = alwaysResize.CreatePolicies(processedForecast)        
     else:
-        log.warning(f"Policies(). {sysConfiguration.PreferredAlgorithm} NOT IMPLEMENTED. Only naive strategy is implemented")
-        return policies, Error(f"{sysConfiguration.PreferredAlgorithm} policy is not implemented")
+        errmsg = f"Policies(). {sysConfiguration.PreferredAlgorithm} NOT IMPLEMENTED"
+        log.warning(errmsg)  # TO-DO
+        return policies, Error(errmsg)
  
     """
     switch sysConfiguration.PreferredAlgorithm {
@@ -135,7 +154,6 @@ def SelectPolicy(policies: list[Policy], sysConfiguration: SystemConfiguration, 
                 - Error in case of any
     */
     """
-    log.warning("SelectPolicy() still NOT IMPLEMENTED, returning emtpy Policy")
 
     mapVMProfiles: dict[str, VmProfile] = {p.Type: p for p in vmProfiles}
     # //Calculate total cost of the policy
@@ -148,6 +166,8 @@ def SelectPolicy(policies: list[Policy], sysConfiguration: SystemConfiguration, 
         policy.Metrics = policyMetrics
         policy.Parameters[Const.VMTYPES.value] = aux_func.MapKeysToString(vmTypes)
         #print(policy.to_json())
+    if len(policies) == 1:
+        return policies[0], Error() # No error
     """
     //Sort policies based on price
     sort.Slice(*policies, func(i, j int) bool {
@@ -174,7 +194,8 @@ def SelectPolicy(policies: list[Policy], sysConfiguration: SystemConfiguration, 
         return types.Policy{}, errors.New("No suitable policy found")
     }
     """
-    return Policy(), Error() # Error("SelectPolicy() not implemented")
+    log.warning("SelectPolicy() NOT IMPLEMENTED, returning empty Policy") # TODO
+    return Policy(), Error()
   
 
 # planner/derivation/policies_derivation.go:545
@@ -189,9 +210,6 @@ def validateVMProfilesAvailable(vmSet: VMScale, mapVMProfiles: dict[str, VmProfi
 def ComputePolicyMetrics(scalingActions: list[ScalingAction], forecast: list[ForecastedValue],
     sysConfiguration: SystemConfiguration, mapVMProfiles: dict[str, VmProfile]) -> Tuple[PolicyMetrics, dict[str, bool]]:
     """//Compute the metrics related to the policy and its scaling actions"""
-
-    log.warning("ComputePolicyMetrics() NOT IMPLEMENTED, returning emtpy PolicyMetrics and VmTypes")
-    # return PolicyMetrics(), {}
 
     avgOverProvision: float
     avgUnderProvision: float
@@ -292,11 +310,17 @@ def ComputePolicyMetrics(scalingActions: list[ScalingAction], forecast: list[For
         )
         scalingAction.Metrics = configMetrics
 
-    avgOverProvision = totalOver/ float(numberScalingActions)
-    avgUnderProvision = totalUnder / float(numberScalingActions)
-    avgElapsedTime = totalElapsedTime / float(numberScalingActions)
-    avgTransitionTime = totalTransitionTime / float(numberScalingActions)
-    avgShadowTime = totalShadowTime / float(numberScalingActions)
+    def my_div(a, b):
+        if b==0:
+            return math.inf
+        else:
+            return a/b
+
+    avgOverProvision = my_div(totalOver, numberScalingActions)
+    avgUnderProvision = my_div(totalUnder, numberScalingActions)
+    avgElapsedTime = my_div(totalElapsedTime, numberScalingActions)
+    avgTransitionTime = my_div(totalTransitionTime, numberScalingActions)
+    avgShadowTime = my_div(totalShadowTime, numberScalingActions)
 
     return PolicyMetrics (
         Cost=round(totalCost, 2),

@@ -1,8 +1,9 @@
 import copy
 from dataclasses import dataclass, field
+import math
 from typing import Any, Optional, Tuple
 
-from .model import BootShutDownTime, Const, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, PerformanceProfile
+from .model import BootShutDownTime, Const, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, MaxServiceCapacity, PerformanceProfile
 from .run import log
 
 
@@ -65,6 +66,27 @@ class PerformanceProfileDAO:
         return err
         """
 
+    # storage/profile_storage.go:132
+    def FindAllUnderLimits(self, cores: float, memory: float) -> Tuple[list[PerformanceProfile], Error]:
+        """/*
+            Bring limits for which are profiles available
+            in:
+                @cores float64
+                @memory float64
+            out:
+                @ContainersConfig []types.ContainersConfig
+                @error
+        */
+        """
+        result = [x for x in self.store 
+            if x.Limit.CPUCores<=cores and x.Limit.MemoryGB <= memory]
+        if result:
+            # log.debug(f"FillAllUnderLimits({cores=}, {memory=}) returns {result}")
+            log.info(f"FillAllUnderLimits({cores=}, {memory=}) returns {len(result)} of {len(self.store)} results")
+            return result, Error()
+        else:
+            return result, Error(f"No results found for ({cores=}, {memory=})")
+
 
 def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
     # LATER: this is related to database connections
@@ -97,10 +119,41 @@ def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
 def GetPredictedReplicas(endpoint: str, appName: str, appType: str, mainServiceName: str,
               msc: float, cpuCores: float, memGb: float) -> Tuple[MSCCompleteSetting, Error]:
 
-    # TODO: this is related to database connections
-    log.warning("GetPredictedReplicas() not implemented")
-    return MSCCompleteSetting(), Error("GetPredictedReplicas() not implemented")
-    
+    # TODO: this is related to an external API which cannot be mocked 
+    # because no json data is provided
+
+    # However, since the goal is to find a MSCCompleteSetting which can give the required msc
+    # it can be faked via a formula
+
+    # The current implementation uses only the parameters:
+    # - "mainServiceName" to locate performance metrics for that service in the database
+    # - "cpuCores" and "memGb" to locate performance metrics for a deployment with 1 replica
+    #   which uses those limits, for that service
+    # - "msc" (which is the forecasted request rate)
+    #
+    # It ignores appName and appType. It simply divides the expected rate between the MSCs given
+    # for the replica found for the given limits,  to find out the required number of replicas
+    # 
+    # It returns the MSCCompleteSettings which includes the computed number of replicas,
+    # and that fakes the remaining data (boot time, msc, stdboot, etc.) from the one
+    # found in the database for replicas=1
+
+    serviceProfileDAO = GetPerformanceProfileDAO(mainServiceName)
+    performanceProfileBase,_ = serviceProfileDAO.FindByLimitsAndReplicas(cpuCores, memGb, 1)
+    mscSettings = performanceProfileBase.MSCSettings[0]
+    estimatedReplicas = int(math.ceil(msc / mscSettings.MSCPerSecond))
+    result = MSCCompleteSetting(
+        Replicas=estimatedReplicas,
+        BootTimeMs=mscSettings.BootTimeSec*1000,
+        MSCPerSecond=MaxServiceCapacity(RegBruteForce=mscSettings.MSCPerSecond),
+        MSCPerMinute=MaxServiceCapacity(RegBruteForce=mscSettings.MSCPerSecond*60),
+        StandDevBootTimeMS=mscSettings.StandDevBootTimeSec
+        )
+    errmsg = (f"GetPredictedReplicas({endpoint=}, {appName=}, {appType=}, "
+              f"{mainServiceName=}, {msc=}, {cpuCores=}, {memGb=}) **making up the answer** {result=}")
+    log.debug(errmsg)
+    return result , Error() # No error
+
     """
     mscSetting = MSCCompleteSetting()
     parameters = {}
