@@ -348,3 +348,86 @@ def ScalingIntervals(forecast: Forecast, granularity: str) -> ProcessedForecast:
 # planner/derivation/miscellaneous.go:136
 def MapKeysToString(keys: dict[str, bool]) -> str:
     return ",".join(keys)
+
+
+
+# planner/derivation/policies_derivation.go:478
+def buildHomogeneousVMSet(numberReplicas: int, limits: Limit_, mapVMProfiles: dict[str, VmProfile]) -> Tuple[VMScale,Error]:
+    """/* Build Homogeneous cluster to deploy a number of replicas, each one with the defined constraint limits
+        in:
+            @numberReplicas	int - number of replicas
+            @limits bool types.Limits - limits constraints(cpu cores and memory gb) per replica
+            @mapVMProfiles - map with the profiles of VMs available
+        out:
+            @VMScale	- Map with the type of VM as key and the number of vms as value
+    */"""
+    err = Error()
+    candidateVMSets: list[VMScale] = []
+    for v in mapVMProfiles.values():
+        vmScale =  VMScale({})
+        replicasCapacity =  maxPodsCapacityInVM(v, limits)
+        if replicasCapacity > 0:
+            numVMs = math.ceil(numberReplicas / replicasCapacity)
+            vmScale[v.Type] = int(numVMs)
+            candidateVMSets.append(vmScale)
+
+    if candidateVMSets:
+        return min(candidateVMSets, key=lambda x: (VMScaleCost(x, mapVMProfiles), VMScaleTotalVms(x))), err
+    else:
+        return VMScale({}), Error("No VM Candidate")
+
+
+# planner/derivation/policies_derivation.go:273
+def selectProfileUnderVMLimits(requests: float,  limits: Limit_) -> Tuple[ContainersConfig, Error]:
+    """/* Select the service profile for any limit resources that satisfies the number of requests
+        in:
+            @requests	float64 - number of requests that the service should serve
+        out:
+            @ContainersConfig	- configuration with number of replicas and limits that best fit for the number of requests
+    */
+    """
+    profiles: list[ContainersConfig] = []
+    profile = ContainersConfig()
+    serviceProfileDAO = GetPerformanceProfileDAO(systemConfiguration.MainServiceName)
+    profiles,err2 = serviceProfileDAO.MatchProfileFitLimitsOver(limits.CPUCores, limits.MemoryGB, requests)
+
+    if not profiles:
+        msg = f"No profile found for {requests=}, {limits=}"
+        log.error(msg)
+        return profile, Error(msg)
+    if err2.error:
+        log.error(f"MatchProfileFitLimitsOver() returned error {err2.error!r}")
+        return profile, err2
+    
+    return (min(profiles, key=lambda x: (abs(requests-x.MSCSetting.MSCPerSecond), 
+                                            x.MSCSetting.Replicas * x.Limits.CPUCores + x.MSCSetting.Replicas * x.Limits.MemoryGB,
+                                            x.MSCSetting.Replicas)),
+            Error())
+    """
+        sort.Slice(profiles, func(i, j int) bool {
+            utilizationFactori := float64(profiles[i].MSCSetting.Replicas) * profiles[i].Limits.CPUCores +  float64(profiles[i].MSCSetting.Replicas) * profiles[i].Limits.MemoryGB
+            utilizationFactorj := float64(profiles[j].MSCSetting.Replicas) * profiles[j].Limits.CPUCores + float64(profiles[j].MSCSetting.Replicas) * profiles[j].Limits.MemoryGB
+            msci := profiles[i].MSCSetting.MSCPerSecond
+            mscj := profiles[j].MSCSetting.MSCPerSecond
+            if msci == mscj {
+                if utilizationFactori != utilizationFactorj {
+                    return utilizationFactori < utilizationFactorj
+                } else {
+                    return 	profiles[i].MSCSetting.Replicas < profiles[j].MSCSetting.Replicas
+                }
+            }
+            return   math.Abs(requests - msci) <  math.Abs(requests - mscj)
+        })
+    }
+    """
+
+
+
+
+
+def VMScaleCost(vmScale: VMScale, mapVMProfiles: dict[str, VmProfile]) -> float:
+    return sum(mapVMProfiles[k]._Pricing.Price * v for k,v in vmScale.items())
+
+def VMScaleTotalVms(vmScale: VMScale) -> int:
+    return sum(vmScale.values())
+

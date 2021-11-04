@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import math
 from typing import Any, Optional, Tuple
 
-from .model import BootShutDownTime, Const, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, MaxServiceCapacity, PerformanceProfile
+from .model import BootShutDownTime, Const, ContainersConfig, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, MaxServiceCapacity, PerformanceProfile
 from .run import log
 
 
@@ -86,6 +86,34 @@ class PerformanceProfileDAO:
             return result, Error()
         else:
             return result, Error(f"No results found for ({cores=}, {memory=})")
+
+    def MatchProfileFitLimitsOver(self, cores: float, memory: float, requests: float) -> Tuple[list[ContainersConfig], Error]:
+        """/*
+            Matches the profiles  which fit into the specified limits and that provide a MSCPerSecond greater or equal than
+            than the number of requests needed
+            in:
+                @requests float64
+            out:
+                @ContainersConfig []types.ContainersConfig
+                @error
+        */
+        """
+        # TODO
+        log.warning(f"MatchProfileLimitsOver({cores=}, {memory=}, {requests=}) NOT IMPLEMENTED. Returns error")
+        return [], Error("MatchProfileFitLimitsOver() not implemented")
+        """
+        var result []types.ContainersConfig
+        query := []bson.M{
+            bson.M{ "$match" : bson.M{"limits.cpu_cores" : bson.M{"$lt": cores}, "limits.mem_gb" : bson.M{"$lt":memory}}},
+            bson.M{"$unwind": "$mscs" },
+            bson.M{"$match": bson.M{"mscs.maximum_service_capacity_per_sec":bson.M{"$gte": requests}}},
+            bson.M{"$sort": bson.M{"limits.cpu_cores":1, "limits.mem_gb":1, "mscs.replicas":1, "mscs.maximum_service_capacity_per_sec": 1}}}
+        err := p.db.C(p.Collection).Pipe(query).All(&result)
+        if len(result) == 0 {
+            return result, errors.New("No result found")
+        }
+        return result, err
+        """
 
 
 def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
@@ -182,6 +210,8 @@ def GetPredictedReplicas(endpoint: str, appName: str, appType: str, mainServiceN
     }
     return mscSetting,err
     """    
+
+
 
 @dataclass
 class VMBootingProfileDAO:

@@ -1,4 +1,4 @@
-preferred-algorithm: best-resource-pair
+preferred-algorithm: always-resize
 app-name: movieapp
 main-service-name: primeapp
 app-type: db-access

@@ -119,6 +119,7 @@ class ServiceInfo: # types/type_policies.go#111
 VMScale = NewType("VMScale", dict[str, int]) # types/types_policies.go:15
 # Number of VMs of each type
 
+
 # Dictionary which maps each service (app) name with a ServiceInfo structure
 Service = NewType("Service", dict[str, ServiceInfo]) # types/types_policies.go:12
 # Service keeps the name and scale of the scaled service
