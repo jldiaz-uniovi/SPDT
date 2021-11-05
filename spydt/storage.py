@@ -153,7 +153,7 @@ class PerformanceProfileDAO:
         return result, err
         """
 
-performanceProfileDAO:PerformanceProfileDAO = None
+performanceProfileDAO: Optional[PerformanceProfileDAO] = None
 
 def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
     # LATER: this is related to database connections

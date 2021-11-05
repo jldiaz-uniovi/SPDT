@@ -422,6 +422,64 @@ def selectProfileUnderVMLimits(requests: float,  limits: Limit_) -> Tuple[Contai
 
 
 
+def getStateLoadCapacity(numberReplicas: int, limits: Limit_) -> MSCSimpleSetting:
+    """/* Select the service profile for any limit resources that satisfies the number of requests
+        in:
+            @numberReplicas	int - number of replicas
+            @limits bool types.Limits - limits constraints(cpu cores and memory gb) per replica
+        out:
+            @float64	- Max number of request for this containers configuration
+    */"""
+    serviceProfileDAO = GetPerformanceProfileDAO(systemConfiguration.MainServiceName)
+    profile,_ = serviceProfileDAO.FindByLimitsAndReplicas(limits.CPUCores, limits.MemoryGB, numberReplicas)
+    if profile.MSCSettings:
+        return profile.MSCSettings[0]
+    else:
+        # TODO
+        log.warning(f"getStateLoadCapacity({numberReplicas=}, {limits=}) not found. INCOMPLETE IMPLEMENTATION, returning empty MSCSimpleSetting")
+        return  MSCSimpleSetting()
+        """
+        url := systemConfiguration.PerformanceProfilesComponent.Endpoint + util.ENDPOINT_SERVICE_PROFILE_BY_REPLICAS
+        appName := systemConfiguration.AppName
+        appType := systemConfiguration.AppType
+        mainServiceName := systemConfiguration.MainServiceName
+        mscCompleteSetting,_ := performance_profiles.GetPredictedMSCByReplicas(url,appName,appType,mainServiceName,numberReplicas,limits.CPUCores, limits.MemoryGB)
+        newMSCSetting = types.MSCSimpleSetting{
+            MSCPerSecond:mscCompleteSetting.MSCPerSecond.RegBruteForce,
+            BootTimeSec:mscCompleteSetting.BootTimeMs,
+            Replicas:mscCompleteSetting.Replicas,
+            StandDevBootTimeSec:mscCompleteSetting.StandDevBootTimeMS/1000,
+        }
+        if newMSCSetting.BootTimeSec == 0 {
+            newMSCSetting.BootTimeSec = util.DEFAULT_POD_BOOT_TIME
+        }
+        //update in db
+
+        profile,_:= serviceProfileDAO.FindByLimitsAndReplicas(limits.CPUCores, limits.MemoryGB, numberReplicas)
+        if profile.ID == "" {
+            profile,_= serviceProfileDAO.FindProfileByLimits(limits)
+            profile.MSCSettings = append(profile.MSCSettings,newMSCSetting)
+            err3 := serviceProfileDAO.UpdateById(profile.ID, profile)
+            if err3 != nil{
+                log.Error("Performance profile not updated")
+            }
+        }
+    }
+    //defer serviceProfileDAO.Session.Close()
+    return newMSCSetting
+    """
+
+
+def computeVMsCapacity(limits: Limit_,  mapVMProfiles: dict[str, VmProfile]):
+    """/* Compute the maximum capacity regarding the number of replicas hosted in each VM type
+        in:
+            @limits
+            @mapVMProfiles
+    */"""
+    for k, v in mapVMProfiles.items():
+        cap = maxPodsCapacityInVM(v, limits)
+        mapVMProfiles[v.Type].ReplicasCapacity = cap
+
 
 
 def VMScaleCost(vmScale: VMScale, mapVMProfiles: dict[str, VmProfile]) -> float:
@@ -429,4 +487,8 @@ def VMScaleCost(vmScale: VMScale, mapVMProfiles: dict[str, VmProfile]) -> float:
 
 def VMScaleTotalVms(vmScale: VMScale) -> int:
     return sum(vmScale.values())
+
+# /*Function that calculates the capacity to host service replicas for a VM Set*/
+def ReplicasCapacity(vmSet: VMScale, mapVMProfiles: dict[str, VmProfile]) -> int:
+    return sum(mapVMProfiles[k].ReplicasCapacity * v for k,v in vmSet.items())
 

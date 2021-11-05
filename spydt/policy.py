@@ -6,6 +6,8 @@ from datetime import datetime
 from types import MethodWrapperType
 from typing import Tuple
 
+from spydt.only_delta_load import DeltaLoadPolicy
+
 from . import aux_func, mock_storage
 from .always_resize import AlwaysResizePolicy
 from .best_resource_pair import BestResourcePairPolicy
@@ -70,7 +72,14 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
             sortedVMProfiles=sortedVMProfiles, 
             sysConfiguration=sysConfiguration, 
             currentState=currentState)
-        policies = alwaysResize.CreatePolicies(processedForecast)        
+        policies = alwaysResize.CreatePolicies(processedForecast)    
+    elif sysConfiguration.PreferredAlgorithm== Const.ONLY_DELTA_ALGORITHM.value:
+        tree = DeltaLoadPolicy(
+            algorithm=Const.ONLY_DELTA_ALGORITHM.value,
+            currentState=currentState,
+            mapVMProfiles=mapVMProfiles,
+            sysConfiguration=sysConfiguration)
+        policies = tree.CreatePolicies(processedForecast)            
     else:
         errmsg = f"Policies(). {sysConfiguration.PreferredAlgorithm} NOT IMPLEMENTED"
         log.warning(errmsg)  # TO-DO
