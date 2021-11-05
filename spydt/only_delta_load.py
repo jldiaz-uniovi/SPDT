@@ -19,6 +19,8 @@ log = logging.getLogger("spydt")
 class DeltaLoadPolicy(AbstractPolicy):
     def FindSuitableVMs(self, numberReplicas:int, limits: Limit_) -> VMScale:
         vmSet, _ = aux_func.buildHomogeneousVMSet(numberReplicas, limits, self.mapVMProfiles)
+        # log.info(f"FindSuitableVMs({numberReplicas=}, {limits=}")
+        # log.info(f" {self.mapVMProfiles=}---> {vmSet=}")
         return vmSet
 
     def CreatePolicies(self, processedForecast: ProcessedForecast) -> list[Policy]:
@@ -28,7 +30,7 @@ class DeltaLoadPolicy(AbstractPolicy):
         newPolicy = Policy()
         newPolicy.Metrics = PolicyMetrics (StartTimeDerivation=datetime.now())
 
-        for it in processedForecast.CriticalIntervals:
+        for n, it in enumerate(processedForecast.CriticalIntervals):
             vmSet = VMScale({})
             newNumPods:int = 0
             podLimits  = Limit_()
@@ -68,11 +70,12 @@ class DeltaLoadPolicy(AbstractPolicy):
                         # //case 1.2: Increases number of VMS. Find new suitable Vm(s) to cover the number of replicas missing.
                         deltaNumPods = newNumPods - currentPodsCapacity
                         vmSet = self.FindSuitableVMs(deltaNumPods, profileCurrentLimits.Limits)
-                        vmSet.update(self.currentState.VMs)
+                        aux_func.Merge(vmSet, self.currentState.VMs)
                 else:
                     # //case 2: delta load is negative, some resources should be terminated
                     # //deltaNumPods := currentNumPods - newNumPods
                     vmSet = self.releaseVMs(self.currentState.VMs, newNumPods, currentPodLimits)
+                    # log.info(f"timeslot {n}: {vmSet=}")
 
             services = Service({})
             services[self.sysConfiguration.MainServiceName] = ServiceInfo(

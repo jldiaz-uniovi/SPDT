@@ -492,3 +492,9 @@ def VMScaleTotalVms(vmScale: VMScale) -> int:
 def ReplicasCapacity(vmSet: VMScale, mapVMProfiles: dict[str, VmProfile]) -> int:
     return sum(mapVMProfiles[k].ReplicasCapacity * v for k,v in vmSet.items())
 
+def Merge(vmSetTarget: VMScale, vmSource: VMScale):
+    for k, v in vmSource.items():
+        if k in vmSetTarget:
+            vmSetTarget[k] += v
+        else:
+            vmSetTarget[k] = v
