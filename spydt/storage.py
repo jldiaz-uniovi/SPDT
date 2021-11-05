@@ -2,14 +2,16 @@ import copy
 from dataclasses import dataclass, field
 import math
 from typing import Any, Optional, Tuple
+from functools import lru_cache
 
-from .model import BootShutDownTime, Const, ContainersConfig, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, MaxServiceCapacity, PerformanceProfile
+from .model import BootShutDownTime, Const, ContainersConfig, Error, InstancesBootShutdownTime, Limit_, MSCCompleteSetting, MSCSimpleSetting, MaxServiceCapacity, PerformanceProfile
 from .run import log
 
 
 @dataclass
 class PerformanceProfileDAO:
     store: list[PerformanceProfile]
+    containers_config_cache: dict[Tuple[float, float, float], list[ContainersConfig]] = field(default_factory=dict)
 
     # LATER: Use mongodb instead of fake storage
     def FindByLimitsAndReplicas(self, cores: float, memory: float, replicas: int) -> Tuple[PerformanceProfile, Error]:
@@ -87,6 +89,7 @@ class PerformanceProfileDAO:
         else:
             return result, Error(f"No results found for ({cores=}, {memory=})")
 
+
     def MatchProfileFitLimitsOver(self, cores: float, memory: float, requests: float) -> Tuple[list[ContainersConfig], Error]:
         """/*
             Matches the profiles  which fit into the specified limits and that provide a MSCPerSecond greater or equal than
@@ -98,9 +101,44 @@ class PerformanceProfileDAO:
                 @error
         */
         """
-        # TODO
-        log.warning(f"MatchProfileLimitsOver({cores=}, {memory=}, {requests=}) NOT IMPLEMENTED. Returns error")
-        return [], Error("MatchProfileFitLimitsOver() not implemented")
+        # log.info(f"({cores=}, {memory=}, {requests=})")
+        if (cores, memory, requests) in self.containers_config_cache:
+            log.info("Cache hit")
+            return self.containers_config_cache[(cores, memory, requests)], Error()
+
+        # Query
+        result: list[PerformanceProfile] = [x for x in self.store 
+            if x.Limit.CPUCores<cores and x.Limit.MemoryGB < memory]
+        if not result:
+            msg = f"No results for MatchProfileLimitsOver({cores=}, {memory=}, {requests=})"
+            log.warning(msg)
+            return [], Error(msg)
+
+        # Unwind msc, by creating a list of PerformanceProfile whose MSCSettings is a single item
+        # instead of a sublist, and filter those which can give enouth MSC
+        aux: list[PerformanceProfile] = [
+            PerformanceProfile(
+                ID=x.ID,
+                MSCSettings=[msc],
+                Limit=x.Limit
+            ) for x in result for msc in x.MSCSettings if msc.MSCPerSecond >= requests
+        ]
+        # sort
+        result = sorted(aux, key=lambda x: (x.Limit.CPUCores, x.Limit.MemoryGB, x.MSCSettings[0].Replicas, x.MSCSettings[0].MSCPerSecond))
+
+        # Create list of ContainersConfig to return
+        to_return:list[ContainersConfig] = [
+            ContainersConfig(
+                Limits=x.Limit, 
+                MSCSetting=x.MSCSettings[0],
+                )
+            for x in result
+        ]
+        self.containers_config_cache[(cores, memory, requests)] = to_return
+        # if cores==2 and memory==8 and 9.2<requests<9.3:
+        #     log.info(f"MatchProfileLimitsOver({cores=}, {memory=}, {requests=}) found {len(to_return)} results")
+        #     log.info(f"The 5 first ones are {to_return[:5]}")
+        return to_return, Error()
         """
         var result []types.ContainersConfig
         query := []bson.M{
@@ -115,11 +153,16 @@ class PerformanceProfileDAO:
         return result, err
         """
 
+performanceProfileDAO:PerformanceProfileDAO = None
 
 def GetPerformanceProfileDAO(serviceName: str) -> PerformanceProfileDAO:
     # LATER: this is related to database connections
+    global performanceProfileDAO
     from . import mock_storage
-    return PerformanceProfileDAO(mock_storage.storedPerformanceProfiles)
+    if performanceProfileDAO is None:
+        performanceProfileDAO = PerformanceProfileDAO(mock_storage.storedPerformanceProfiles)
+    return performanceProfileDAO
+
     """
     if PerformanceProfileDB == nil {
         PerformanceProfileDB = &PerformanceProfileDAO {

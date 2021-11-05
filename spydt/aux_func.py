@@ -390,7 +390,6 @@ def selectProfileUnderVMLimits(requests: float,  limits: Limit_) -> Tuple[Contai
     profile = ContainersConfig()
     serviceProfileDAO = GetPerformanceProfileDAO(systemConfiguration.MainServiceName)
     profiles,err2 = serviceProfileDAO.MatchProfileFitLimitsOver(limits.CPUCores, limits.MemoryGB, requests)
-
     if not profiles:
         msg = f"No profile found for {requests=}, {limits=}"
         log.error(msg)

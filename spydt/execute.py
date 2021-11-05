@@ -8,6 +8,7 @@ log = logging.getLogger("spytd")
 def TriggerScheduler(policy: Policy, endpoint: str) -> Tuple[list[StateToSchedule], Error]:
     statesToSchedule: list[StateToSchedule] = []
     log.warning("TriggerScheduler() NOT IMPLEMENTED, returning empty list and error")  # TO-DO
+    log.warning(f"The schedule was {policy.to_json()}")
     return statesToSchedule, Error("TriggerScheduler() not implemented")
 
     """
