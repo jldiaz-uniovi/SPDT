@@ -3,10 +3,12 @@ import math
 from abc import ABC
 from dataclasses import dataclass, field
 from datetime import datetime
+import sys
 from types import MethodWrapperType
 from typing import Tuple
 
 from spydt.only_delta_load import DeltaLoadPolicy
+from spydt.resize_when_beneficial import ResizeWhenBeneficialPolicy
 
 from . import aux_func, mock_storage
 from .always_resize import AlwaysResizePolicy
@@ -79,7 +81,15 @@ def Policies(sortedVMProfiles: list[VmProfile], sysConfiguration: SystemConfigur
             currentState=currentState,
             mapVMProfiles=mapVMProfiles,
             sysConfiguration=sysConfiguration)
-        policies = tree.CreatePolicies(processedForecast)            
+        policies = tree.CreatePolicies(processedForecast)
+    elif sysConfiguration.PreferredAlgorithm == Const.RESIZE_WHEN_BENEFICIAL.value:
+        algorithm = ResizeWhenBeneficialPolicy(
+            algorithm=Const.RESIZE_WHEN_BENEFICIAL.value,
+            currentState=currentState,
+            sortedVMProfiles=sortedVMProfiles,
+            mapVMProfiles=mapVMProfiles,
+            sysConfiguration=sysConfiguration)
+        policies = algorithm.CreatePolicies(processedForecast)            
     else:
         errmsg = f"Policies(). {sysConfiguration.PreferredAlgorithm} NOT IMPLEMENTED"
         log.warning(errmsg)  # TO-DO

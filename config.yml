@@ -1,4 +1,4 @@
-preferred-algorithm: only-delta-load
+preferred-algorithm: resize-when-beneficial
 app-name: movieapp
 main-service-name: primeapp
 app-type: db-access

@@ -489,10 +489,10 @@ def VMScaleTotalVms(vmScale: VMScale) -> int:
     return sum(vmScale.values())
 
 # /*Function that calculates the capacity to host service replicas for a VM Set*/
-def ReplicasCapacity(vmSet: VMScale, mapVMProfiles: dict[str, VmProfile]) -> int:
+def VMScaleReplicasCapacity(vmSet: VMScale, mapVMProfiles: dict[str, VmProfile]) -> int:
     return sum(mapVMProfiles[k].ReplicasCapacity * v for k,v in vmSet.items())
 
-def Merge(vmSetTarget: VMScale, vmSource: VMScale):
+def VMScaleMerge(vmSetTarget: VMScale, vmSource: VMScale):
     for k, v in vmSource.items():
         if k in vmSetTarget:
             vmSetTarget[k] += v

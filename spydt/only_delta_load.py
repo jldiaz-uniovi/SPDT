@@ -62,7 +62,7 @@ class DeltaLoadPolicy(AbstractPolicy):
                 if deltaLoad > 0:
                     # //case 1: Increase resources
                     aux_func.computeVMsCapacity(profileCurrentLimits.Limits, self.mapVMProfiles)
-                    currentPodsCapacity = aux_func.ReplicasCapacity(self.currentState.VMs, self.mapVMProfiles)
+                    currentPodsCapacity = aux_func.VMScaleReplicasCapacity(self.currentState.VMs, self.mapVMProfiles)
                     if currentPodsCapacity >= newNumPods:
                         # //case 1.1: Increases number of replicas with the current limit resources but VMS remain the same
                         vmSet = self.currentState.VMs
@@ -70,7 +70,7 @@ class DeltaLoadPolicy(AbstractPolicy):
                         # //case 1.2: Increases number of VMS. Find new suitable Vm(s) to cover the number of replicas missing.
                         deltaNumPods = newNumPods - currentPodsCapacity
                         vmSet = self.FindSuitableVMs(deltaNumPods, profileCurrentLimits.Limits)
-                        aux_func.Merge(vmSet, self.currentState.VMs)
+                        aux_func.VMScaleMerge(vmSet, self.currentState.VMs)
                 else:
                     # //case 2: delta load is negative, some resources should be terminated
                     # //deltaNumPods := currentNumPods - newNumPods
